@@ -2,300 +2,187 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>meet me half wei</title>
+  <title>Wei Yu · Urban Planner</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root {
-      --bg: #050608;
-      --bg-alt: #0f1115;
-      --fg: #f5f5f5;
-      --muted: #9da3b0;
-      --accent: #7dd3fc;
-      --accent-soft: rgba(125, 211, 252, 0.1);
-      --border: #1f2933;
-      --radius-lg: 18px;
-      --radius-sm: 999px;
-      --shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.6);
+      --bg: #e5e7eb;       /* base grey */
+      --text: #111827;     /* near-black */
+      --muted: #4b5563;    /* secondary text */
+      --accent: #111827;   /* for hover underline */
     }
 
     * {
       box-sizing: border-box;
     }
 
-    body {
+    html, body {
       margin: 0;
-      background: radial-gradient(circle at top, #111827 0, #050608 55%);
-      color: var(--fg);
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-        sans-serif;
-      line-height: 1.6;
+      padding: 0;
+      min-height: 100%;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Animated gradient + grain background layer */
+    .bg-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: -2;
+      background:
+        radial-gradient(circle at 0% 0%, rgba(255, 255, 255, 0.7), transparent 55%),
+        radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 0.45), transparent 55%),
+        radial-gradient(circle at 0% 100%, rgba(255, 255, 255, 0.4), transparent 55%),
+        radial-gradient(circle at 100% 100%, rgba(255, 255, 255, 0.65), transparent 55%),
+        var(--bg);
+      background-size: 160% 160%;
+      animation: gradientFlow 18s ease-in-out infinite alternate;
+    }
+
+    .bg-layer::before {
+      content: "";
+      position: absolute;
+      inset: -40px;
+      background-image:
+        radial-gradient(circle, rgba(255, 255, 255, 0.35) 0, transparent 60%);
+      mix-blend-mode: soft-light;
+      opacity: 0.23;
+      animation: grainShift 2.4s steps(4) infinite;
+    }
+
+    @keyframes gradientFlow {
+      0% {
+        background-position: 0% 0%;
+      }
+      50% {
+        background-position: 50% 100%;
+      }
+      100% {
+        background-position: 100% 50%;
+      }
+    }
+
+    @keyframes grainShift {
+      0%   { transform: translate3d(0, 0, 0); }
+      25%  { transform: translate3d(-10px, 8px, 0); }
+      50%  { transform: translate3d(6px, -10px, 0); }
+      75%  { transform: translate3d(-4px, 4px, 0); }
+      100% { transform: translate3d(0, 0, 0); }
+    }
+
+    .page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: clamp(2.5rem, 5vw, 4rem);
+    }
+
+    .content {
+      max-width: 720px;
+    }
+
+    .name {
+      font-size: clamp(2.4rem, 3.5vw, 3rem);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin: 0 0 1.6rem;
+    }
+
+    .roles {
+      font-size: clamp(1.1rem, 1.5vw, 1.3rem);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      line-height: 1.7;
+      margin: 0 0 3rem;
+    }
+
+    .links {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      font-size: 1rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
     }
 
     a {
       color: inherit;
       text-decoration: none;
-    }
-
-    img {
-      max-width: 100%;
-      display: block;
-    }
-
-    .site {
-      max-width: 960px;
-      margin: 0 auto;
-      padding: 1.5rem 1.25rem 4rem;
-    }
-
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      padding: 0.5rem 0 1.5rem;
-    }
-
-    .logo {
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      text-transform: lowercase;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.6rem;
-    }
-
-    .logo-mark {
-      width: 26px;
-      height: 26px;
-      border-radius: 9px;
-      background: linear-gradient(135deg, #38bdf8, #a855f7);
-      box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.8),
-        0 12px 26px rgba(0, 0, 0, 0.7);
-    }
-
-    nav {
-      display: flex;
-      gap: 1.25rem;
-      font-size: 0.9rem;
-      color: var(--muted);
-    }
-
-    nav a {
       position: relative;
-      padding-bottom: 0.1rem;
+      display: inline-block;
+      padding-bottom: 2px;
     }
 
-    nav a::after {
+    a::after {
       content: "";
       position: absolute;
       left: 0;
       bottom: 0;
       width: 0;
-      height: 2px;
-      border-radius: 999px;
-      background: linear-gradient(90deg, #38bdf8, #a855f7);
-      transition: width 0.16s ease-out;
+      height: 1px;
+      background-color: var(--accent);
+      transition: width 0.18s ease-out;
     }
 
-    nav a:hover::after {
+    a:hover::after,
+    a:focus-visible::after {
       width: 100%;
     }
 
-    main {
-      display: grid;
-      grid-template-columns: minmax(0, 3fr) minmax(0, 2.2fr);
-      gap: 2rem;
-      align-items: start;
-    }
-
-    @media (max-width: 768px) {
-      main {
-        grid-template-columns: minmax(0, 1fr);
-      }
-
-      header {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-
-      nav {
-        flex-wrap: wrap;
-      }
-    }
-
-    .card {
-      background: linear-gradient(145deg, rgba(15, 23, 42, 0.98), #020617);
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--border);
-      padding: 1.6rem 1.5rem;
-      box-shadow: var(--shadow-soft);
-    }
-
-    .hero-title {
-      font-size: clamp(2rem, 1.1rem + 2vw, 2.5rem);
-      margin: 0 0 0.4rem;
-    }
-
-    .hero-tagline {
-      margin: 0 0 1rem;
+    small {
+      display: block;
+      margin-top: 2rem;
       color: var(--muted);
-      font-size: 0.96rem;
-    }
-
-    .pill-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-bottom: 1.3rem;
-    }
-
-    .pill {
-      font-size: 0.78rem;
-      padding: 0.35rem 0.75rem;
-      border-radius: var(--radius-sm);
-      border: 1px solid rgba(148, 163, 184, 0.35);
-      color: var(--muted);
-      background: radial-gradient(circle at top left, var(--accent-soft), #020617);
-    }
-
-    .pill--accent {
-      border-color: rgba(56, 189, 248, 0.6);
-      color: var(--accent);
-    }
-
-    .section-title {
-      font-size: 0.9rem;
-      text-transform: uppercase;
-      letter-spacing: 0.14em;
-      color: var(--muted);
-      margin-bottom: 0.6rem;
-    }
-
-    .about p {
-      margin: 0 0 0.75rem;
-      font-size: 0.96rem;
-    }
-
-    .social-list {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 0.6rem;
-      margin-top: 0.8rem;
-    }
-
-    .social-link {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-radius: 999px;
-      padding: 0.5rem 0.85rem;
-      border: 1px solid var(--border);
-      background: #020617;
-      font-size: 0.86rem;
-      color: var(--muted);
-      transition: border 0.15s ease, transform 0.1s ease,
-        background-color 0.15s ease;
-    }
-
-    .social-main {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .social-badge {
-      font-size: 0.7rem;
-      text-transform: uppercase;
+      font-size: 0.8rem;
       letter-spacing: 0.08em;
-      color: var(--accent);
+      text-transform: uppercase;
     }
 
-    .social-link:hover {
-      border-color: rgba(56, 189, 248, 0.7);
-      background: radial-gradient(circle at top left, var(--accent-soft), #020617);
-      transform: translateY(-1px);
-    }
+    @media (max-width: 640px) {
+      .page {
+        align-items: flex-start;
+        padding-top: 4rem;
+      }
 
-    .arrow {
-      font-size: 0.9rem;
-    }
-
-    .gallery-preview {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 0.35rem;
-      margin-top: 0.8rem;
-    }
-
-    .gallery-thumb {
-      position: relative;
-      overflow: hidden;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      min-height: 72px;
-      background: radial-gradient(circle at 30% 0, #1e293b, #020617);
-    }
-
-    .gallery-thumb span {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: flex-end;
-      padding: 0.45rem 0.55rem;
-      font-size: 0.7rem;
-      color: var(--muted);
-      background: linear-gradient(
-        to top,
-        rgba(15, 23, 42, 0.9),
-        rgba(15, 23, 42, 0)
-      );
-    }
-
-    .gallery-thumb:hover {
-      border-color: rgba(56, 189, 248, 0.7);
-    }
-
-    .note {
-      font-size: 0.78rem;
-      color: var(--muted);
-      margin-top: 0.7rem;
-    }
-
-    footer {
-      margin-top: 2.5rem;
-      font-size: 0.78rem;
-      color: var(--muted);
-      text-align: center;
+      .roles {
+        margin-bottom: 2.4rem;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="site">
-    <header>
-      <div class="logo">
-        <div class="logo-mark"></div>
-        <span>meet me half wei</span>
-      </div>
-      <nav>
-        <a href="#about">about</a>
-        <a href="#work">photos</a>
-        <a href="#socials">socials</a>
+  <div class="bg-layer" aria-hidden="true"></div>
+
+  <div class="page">
+    <main class="content">
+      <h1 class="name">Wei&nbsp;Yu</h1>
+
+      <p class="roles">
+        Urban Planner<br />
+        Analyst<br />
+        Artist<br />
+        Designer
+      </p>
+
+      <nav class="links" aria-label="Primary contact links">
+        <a href="https://www.linkedin.com/in/robert-wei-yu-650204137/" target="_blank" rel="noopener noreferrer">
+          LinkedIn
+        </a>
+        <a href="mailto:yuxx0752@gmail.com">
+          Email
+        </a>
       </nav>
-    </header>
 
-    <main>
-      <!-- LEFT COLUMN: intro + about -->
-      <section class="card">
-        <h1 class="hero-title">Urban Planning, Transportation, and Data Analysis with a Art Degree.</h1>
-        <p class="hero-tagline">
-          6 Years of Experience in Transportation and helping things work.
-        </p>
-
-        <div class="pill-row">
-          <span class="pill pill--accent">NYC • passenger rail • NEPA-ish</span>
-          <span class="pill">capital projects &amp; funding</span>
-          <span class="pill">maps, words, diagrams, and more diagrams</span>
-        </div>
-
-        <div id="about
-
+      <small>meetmehalfwei.art</small>
+    </main>
+  </div>
+</body>
+</html>
