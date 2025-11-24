@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root {
-      --bg: #e5e7eb;       /* base grey */
+      --bg: #dde1e8;       /* slightly richer grey */
       --text: #111827;     /* near-black */
       --muted: #4b5563;    /* secondary text */
       --accent: #111827;   /* for hover underline */
@@ -31,20 +31,20 @@
       overflow-x: hidden;
     }
 
-    /* Animated gradient + grain background layer */
+    /* Animated blob + grain background */
     .bg-layer {
       position: fixed;
       inset: 0;
       pointer-events: none;
       z-index: -2;
       background:
-        radial-gradient(circle at 0% 0%, rgba(255, 255, 255, 0.7), transparent 55%),
-        radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 0.45), transparent 55%),
-        radial-gradient(circle at 0% 100%, rgba(255, 255, 255, 0.4), transparent 55%),
-        radial-gradient(circle at 100% 100%, rgba(255, 255, 255, 0.65), transparent 55%),
+        radial-gradient(circle at 18% 25%, rgba(255, 255, 255, 0.7), transparent 55%),
+        radial-gradient(circle at 82% 22%, rgba(255, 255, 255, 0.45), transparent 55%),
+        radial-gradient(circle at 20% 82%, rgba(255, 255, 255, 0.5), transparent 55%),
+        radial-gradient(circle at 86% 76%, rgba(255, 255, 255, 0.65), transparent 55%),
         var(--bg);
-      background-size: 160% 160%;
-      animation: gradientFlow 18s ease-in-out infinite alternate;
+      background-size: 150% 150%;
+      animation: gradientBlobs 22s ease-in-out infinite alternate;
     }
 
     .bg-layer::before {
@@ -52,21 +52,24 @@
       position: absolute;
       inset: -40px;
       background-image:
-        radial-gradient(circle, rgba(255, 255, 255, 0.35) 0, transparent 60%);
+        radial-gradient(circle, rgba(255, 255, 255, 0.4) 0, transparent 60%);
       mix-blend-mode: soft-light;
-      opacity: 0.23;
+      opacity: 0.24;
       animation: grainShift 2.4s steps(4) infinite;
     }
 
-    @keyframes gradientFlow {
+    @keyframes gradientBlobs {
       0% {
         background-position: 0% 0%;
       }
-      50% {
-        background-position: 50% 100%;
+      33% {
+        background-position: 30% 80%;
+      }
+      66% {
+        background-position: 80% 40%;
       }
       100% {
-        background-position: 100% 50%;
+        background-position: 50% 50%;
       }
     }
 
@@ -90,18 +93,29 @@
     }
 
     .name {
-      font-size: clamp(2.4rem, 3.5vw, 3rem);
+      font-size: clamp(3.8rem, 6vw, 5rem); /* bigger name */
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      margin: 0 0 1.6rem;
+      margin: 0 0 1.3rem;
     }
 
-    .roles {
-      font-size: clamp(1.1rem, 1.5vw, 1.3rem);
+    .tagline {
+      font-size: 1rem;
       letter-spacing: 0.16em;
       text-transform: uppercase;
-      line-height: 1.7;
-      margin: 0 0 3rem;
+      margin: 0 0 1.5rem;
+    }
+
+    .meta-lines {
+      margin: 0 0 2.8rem;
+      font-size: 0.96rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      line-height: 1.8;
+    }
+
+    .meta-lines strong {
+      font-weight: 600;
     }
 
     .links {
@@ -152,8 +166,8 @@
         padding-top: 4rem;
       }
 
-      .roles {
-        margin-bottom: 2.4rem;
+      .meta-lines {
+        margin-bottom: 2.2rem;
       }
     }
   </style>
@@ -165,12 +179,16 @@
     <main class="content">
       <h1 class="name">Wei&nbsp;Yu</h1>
 
-      <p class="roles">
-        Urban Planner<br />
-        Analyst<br />
-        Artist<br />
-        Designer
+      <p class="tagline">
+        Urban Planner &nbsp;·&nbsp; Analyst &nbsp;·&nbsp; Artist &nbsp;·&nbsp; Designer
       </p>
+
+      <div class="meta-lines">
+        <div><strong>Work – Amtrak</strong></div>
+        <div><strong>Work – Masters of Urban Planning</strong></div>
+        <div><strong>Art</strong></div>
+        <div><strong>Travel</strong></div>
+      </div>
 
       <nav class="links" aria-label="Primary contact links">
         <a href="https://www.linkedin.com/in/robert-wei-yu-650204137/" target="_blank" rel="noopener noreferrer">
