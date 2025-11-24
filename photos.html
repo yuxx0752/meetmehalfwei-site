@@ -23,17 +23,16 @@
     position: relative;
   }
 
-  /* same background style as home */
+  /* Background consistent with home */
   .bg-layer {
     position: fixed;
     inset: 0;
     z-index: -2;
     pointer-events: none;
-
     background:
-      radial-gradient(circle at 20% 30%, rgba(226,235,209,0.55), rgba(230,230,235,0) 60%),
-      radial-gradient(circle at 80% 25%, rgba(216,240,224,0.45), rgba(230,230,235,0) 65%),
-      radial-gradient(circle at 30% 75%, rgba(233,235,197,0.45), rgba(230,230,235,0) 65%),
+      radial-gradient(circle at 20% 30%, rgba(255,255,255,0.55), rgba(230,230,235,0) 60%),
+      radial-gradient(circle at 80% 25%, rgba(215,220,230,0.45), rgba(230,230,235,0) 65%),
+      radial-gradient(circle at 30% 75%, rgba(200,205,215,0.45), rgba(230,230,235,0) 65%),
       radial-gradient(circle at 70% 70%, rgba(235,240,255,0.35), rgba(230,230,235,0) 60%),
       linear-gradient(180deg, #e3e5e9 0%, #dcdfe4 100%);
   }
@@ -51,7 +50,7 @@
 
   .container {
     width: 100%;
-    max-width: 980px;
+    max-width: 900px;
   }
 
   header {
@@ -78,40 +77,32 @@
     opacity: 0.6;
   }
 
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 20px;
+  /* Big stacked photo */
+  .photo-block {
+    margin-bottom: 40px;
   }
 
-  .item img {
+  .photo-block img {
     width: 100%;
-    height: 260px;
+    border-radius: 18px;
     object-fit: cover;
-    border-radius: 12px;
-    display: block;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
   }
 
   .item-title {
-    margin-top: 10px;
-    font-size: 16px;
+    margin-top: 14px;
+    font-size: 20px;
     font-weight: 600;
   }
 
   .item-subtitle {
-    font-size: 13px;
+    font-size: 14px;
     color: #555;
-    margin-top: 2px;
+    margin-top: 4px;
   }
 
   @media (max-width: 600px) {
-    body {
-      padding-top: 32px;
-    }
-
-    h1 {
-      font-size: 26px;
-    }
+    h1 { font-size: 26px; }
   }
 </style>
 </head>
@@ -126,31 +117,29 @@
     <a href="index.html" class="back-link">← Back to Home</a>
   </header>
 
-  <section class="grid">
-    <div class="item">
-      <img src="img/MIAMI1.jpg" alt="Miami">
-      <div class="item-title">Miami</div>
-      <div class="item-subtitle">Got to check out a Brightline Train</div>
-    </div>
+  <div class="photo-block">
+    <img src="img/MIAMI1.jpg" alt="Miami">
+    <div class="item-title">Miami</div>
+    <div class="item-subtitle">Heat, color, and water.</div>
+  </div>
 
-    <div class="item">
-      <img src="img/NYC1.jpg" alt="New York City">
-      <div class="item-title">New York City</div>
-      <div class="item-subtitle">Got to check out a electric street sweeper</div>
-    </div>
+  <div class="photo-block">
+    <img src="img/NYC1.jpg" alt="New York City">
+    <div class="item-title">New York City</div>
+    <div class="item-subtitle">Edges of the city, home base.</div>
+  </div>
 
-    <div class="item">
-      <img src="img/NZ1.jpg" alt="New Zealand">
-      <div class="item-title">New Zealand</div>
-      <div class="item-subtitle">Got to check out Auckland</div>
-    </div>
+  <div class="photo-block">
+    <img src="img/NZ1.jpg" alt="New Zealand">
+    <div class="item-title">New Zealand</div>
+    <div class="item-subtitle">Cool air, long horizons.</div>
+  </div>
 
-    <div class="item">
-      <img src="img/UK1.jpg" alt="United Kingdom">
-      <div class="item-title">UK</div>
-      <div class="item-subtitle">Got to check out a cool castle</div>
-    </div>
-  </section>
+  <div class="photo-block">
+    <img src="img/UK1.jpg" alt="United Kingdom">
+    <div class="item-title">UK</div>
+    <div class="item-subtitle">Stations, streets, grey skies.</div>
+  </div>
 
 </div>
 
