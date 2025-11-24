@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Art — Wei Yu</title>
+
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    color: #111;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 24px;
+    position: relative;
+  }
+
+  /* background shared with all pages */
+  .bg-layer {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 20% 30%, rgba(255,255,255,0.55), rgba(230,230,235,0) 60%),
+      radial-gradient(circle at 80% 25%, rgba(215,220,230,0.45), rgba(230,230,235,0) 65%),
+      radial-gradient(circle at 30% 75%, rgba(200,205,215,0.45), rgba(230,230,235,0) 65%),
+      radial-gradient(circle at 70% 70%, rgba(235,240,255,0.35), rgba(230,230,235,0) 60%),
+      linear-gradient(180deg, #e3e5e9 0%, #dcdfe4 100%);
+  }
+
+  .bg-layer::before {
+    content: "";
+    position: absolute;
+    inset: -40px;
+    pointer-events: none;
+    background-image: 
+      url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIW2NkYPhfDwAB5gGkz7LxyzAAAAAASUVORK5CYII=');
+    opacity: 0.22;
+    mix-blend-mode: soft-light;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 900px;
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 32px;
+  }
+
+  h1 {
+    font-size: 32px;
+    letter-spacing: 0.08em;
+  }
+
+  .back-link {
+    font-size: 14px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: #111;
+  }
+
+  .back-link:hover {
+    opacity: 0.6;
+  }
+
+  /* large stacked art pieces */
+  .art-block {
+    margin-bottom: 40px;
+  }
+
+  .art-block img {
+    width: 100%;
+    border-radius: 18px;
+    object-fit: cover;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  }
+
+  .art-title {
+    margin-top: 12px;
+    font-size: 18px;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-layer"></div>
+
+<div class="container">
+
+  <header>
+    <h1>Art</h1>
+    <a href="index.html" class="back-link">← Back to Home</a>
+  </header>
+
+  <!-- Bird pieces -->
+  <div class="art-block">
+    <img src="img/Bird 1.jpg" alt="Bird 1">
+    <div class="art-title">Bird 1</div>
+  </div>
+
+  <div class="art-block">
+    <img src="img/Bird 2.jpg" alt="Bird 2">
+    <div class="art-title">Bird 2</div>
+  </div>
+
+  <div class="art-block">
+    <img src="img/Bird 3.jpg" alt="Bird 3">
+    <div class="art-title">Bird 3</div>
+  </div>
+
+  <div class="art-block">
+    <img src="img/Bird 4.jpg" alt="Bird 4">
+    <div class="art-title">Bird 4</div>
+  </div>
+
+  <div class="art-block">
+    <img src="img/Bird 5.jpg" alt="Bird 5">
+    <div class="art-title">Bird 5</div>
+  </div>
+
+  <div class="art-block">
+    <img src="img/Bird 6.png" alt="Bird 6">
+    <div class="art-title">Bird 6</div>
+  </div>
+
+  <div class="art-block">
+    <img src="img/Bird 7.png" alt="Bird 7">
+    <div class="art-title">Bird 7</div>
+  </div>
+
+  <div class="art-block">
+    <img src="img/Bird 8.jpg" alt="Bird 8">
+    <div class="art-title">Bird 8</div>
+  </div>
+
+  <div class="art-block">
+    <img src="img/Bird 9.jpg" alt="Bird 9">
+    <div class="art-title">Bird 9</div>
+  </div>
+
+  <div class="art-block">
+    <img src="img/Bird 10.png" alt="Bird 10">
+    <div class="art-title">Bird 10</div>
+  </div>
+
+</div>
+
+</body>
+</html>
