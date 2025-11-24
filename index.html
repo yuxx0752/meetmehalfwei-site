@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Photos — Wei Yu</title>
+<title>Wei Yu — Home</title>
 
 <style>
   * {
@@ -16,14 +16,14 @@
     font-family: Arial, Helvetica, sans-serif;
     color: #111;
     min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 40px 24px;
     position: relative;
+    display: flex;
+    align-items: flex-start;   /* allows shifting downward */
+    justify-content: flex-start; /* allows shifting left */
+    padding: 120px 160px;      /* ← move everything SW here */
   }
 
-  /* same background style as home */
+  /* Soft static multi-grey background */
   .bg-layer {
     position: fixed;
     inset: 0;
@@ -49,69 +49,77 @@
     mix-blend-mode: soft-light;
   }
 
-  .container {
-    width: 100%;
-    max-width: 980px;
-  }
-
-  header {
+  .profile-wrapper {
     display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 32px;
-  }
-
-  h1 {
-    font-size: 32px;
-    letter-spacing: 0.08em;
-  }
-
-  .back-link {
-    font-size: 14px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    text-decoration: none;
-    color: #111;
-  }
-
-  .back-link:hover {
-    opacity: 0.6;
-  }
-
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    flex-direction: column;
+    align-items: flex-start;
     gap: 20px;
   }
 
-  .item img {
-    width: 100%;
-    height: 260px;
+  /* Circular profile photo */
+  .profile-pic {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
     object-fit: cover;
-    border-radius: 12px;
-    display: block;
+    border: 3px solid rgba(255,255,255,0.8);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   }
 
-  .item-title {
-    margin-top: 10px;
+  .name {
+    font-size: 48px;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+  }
+
+  .subtitle {
     font-size: 16px;
+    letter-spacing: 0.1em;
+    opacity: 0.75;
+    margin-bottom: 20px;
+  }
+
+  .section-links {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .section-links a {
+    font-size: 16px;
+    text-decoration: none;
+    color: #111;
     font-weight: 600;
+    letter-spacing: 0.04em;
   }
 
-  .item-subtitle {
-    font-size: 13px;
-    color: #555;
-    margin-top: 2px;
+  .section-links a:hover {
+    opacity: 0.6;
   }
 
-  @media (max-width: 600px) {
+  .contact {
+    margin-top: 10px;
+    font-size: 15px;
+    letter-spacing: 0.05em;
+  }
+
+  .contact a {
+    text-decoration: none;
+    color: #111;
+    margin-right: 20px;
+  }
+
+  .contact a:hover {
+    opacity: 0.6;
+  }
+
+  /* Responsive */
+  @media (max-width: 700px) {
     body {
-      padding-top: 32px;
+      padding: 80px 30px;
     }
-
-    h1 {
-      font-size: 26px;
-    }
+    .name { font-size: 38px; }
   }
 </style>
 </head>
@@ -119,38 +127,25 @@
 
 <div class="bg-layer"></div>
 
-<div class="container">
+<div class="profile-wrapper">
 
-  <header>
-    <h1>Photos</h1>
-    <a href="index.html" class="back-link">← Back to Home</a>
-  </header>
+  <!-- Profile Photo -->
+  <img src="img/WeiYuPortrait.jpg" class="profile-pic" alt="Wei Yu">
 
-  <section class="grid">
-    <div class="item">
-      <img src="img/MIAMI1.jpg" alt="Miami">
-      <div class="item-title">Miami</div>
-      <div class="item-subtitle">Heat, color, and water.</div>
-    </div>
+  <div class="name">WEI YU</div>
+  <div class="subtitle">Urban Planner • Analyst • Artist • Designer</div>
 
-    <div class="item">
-      <img src="img/NYC1.jpg" alt="New York City">
-      <div class="item-title">New York City</div>
-      <div class="item-subtitle">Home base, edges of the city.</div>
-    </div>
+  <div class="section-links">
+    <a href="#">WORK — AMTRAK</a>
+    <a href="#">WORK — MASTERS OF URBAN PLANNING</a>
+    <a href="#">ART</a>
+    <a href="photos.html">PHOTOS</a>
+  </div>
 
-    <div class="item">
-      <img src="img/NZ1.jpg" alt="New Zealand">
-      <div class="item-title">New Zealand</div>
-      <div class="item-subtitle">Cool air, long horizons.</div>
-    </div>
-
-    <div class="item">
-      <img src="img/UK1.jpg" alt="United Kingdom">
-      <div class="item-title">UK</div>
-      <div class="item-subtitle">Streets, stations, grey skies.</div>
-    </div>
-  </section>
+  <div class="contact">
+    <a href="https://www.linkedin.com/in/robert-wei-yu-650204137/" target="_blank">LinkedIn</a>
+    <a href="mailto:yuxx0752@gmail.com">Email: yuxx0752@gmail.com</a>
+  </div>
 
 </div>
 
