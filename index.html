@@ -92,6 +92,15 @@
       max-width: 720px;
     }
 
+    .profile-photo {
+      width: 160px;
+      height: 160px;
+      object-fit: cover;
+      border-radius: 50%;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.15);
+    }
+
     .name {
       font-size: clamp(3.8rem, 6vw, 5rem); /* bigger name */
       letter-spacing: 0.08em;
@@ -177,6 +186,8 @@
 
   <div class="page">
     <main class="content">
+      <img src="img/WeiYuPortrait.jpg" alt="Portrait of Wei Yu" class="profile-photo" />
+
       <h1 class="name">Wei&nbsp;Yu</h1>
 
       <p class="tagline">
@@ -187,16 +198,14 @@
         <div><strong>Work – Amtrak</strong></div>
         <div><strong>Work – Masters of Urban Planning</strong></div>
         <div><strong>Art</strong></div>
-        <div><strong>Travel</strong></div>
+        <div><strong>Photos</strong></div>
       </div>
 
       <nav class="links" aria-label="Primary contact links">
         <a href="https://www.linkedin.com/in/robert-wei-yu-650204137/" target="_blank" rel="noopener noreferrer">
           LinkedIn
         </a>
-        <a href="mailto:yuxx0752@gmail.com">
-          Email
-        </a>
+        <a href="mailto:yuxx0752@gmail.com">Email</a>
       </nav>
 
       <small>meetmehalfwei.art</small>
