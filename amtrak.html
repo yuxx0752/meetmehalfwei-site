@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Work — Amtrak</title>
+
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    color: #111;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 24px;
+    position: relative;
+  }
+
+  /* background used across site */
+  .bg-layer {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+
+    background:
+      radial-gradient(circle at 20% 30%, rgba(255,255,255,0.55), rgba(230,230,235,0) 60%),
+      radial-gradient(circle at 80% 25%, rgba(215,220,230,0.45), rgba(230,230,235,0) 65%),
+      radial-gradient(circle at 30% 75%, rgba(200,205,215,0.45), rgba(230,230,235,0) 65%),
+      radial-gradient(circle at 70% 70%, rgba(235,240,255,0.35), rgba(230,230,235,0) 60%),
+      linear-gradient(180deg, #e3e5e9 0%, #dcdfe4 100%);
+  }
+
+  .bg-layer::before {
+    content: "";
+    position: absolute;
+    inset: -40px;
+    pointer-events: none;
+    background-image: 
+      url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIW2NkYPhfDwAB5gGkz7LxyzAAAAAASUVORK5CYII=');
+    opacity: 0.22;
+    mix-blend-mode: soft-light;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 900px;
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 32px;
+  }
+
+  h1 {
+    font-size: 32px;
+    letter-spacing: 0.08em;
+  }
+
+  .back-link {
+    font-size: 14px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: #111;
+  }
+  .back-link:hover { opacity: 0.6; }
+
+  .work-block {
+    margin-bottom: 40px;
+  }
+
+  .work-block img {
+    width: 100%;
+    border-radius: 18px;
+    object-fit: cover;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  }
+
+  .work-title {
+    margin-top: 12px;
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+</style>
+</head>
+<body>
+
+<div class="bg-layer"></div>
+
+<div class="container">
+
+  <header>
+    <h1>Work — Amtrak</h1>
+    <a href="index.html" class="back-link">← Back to Home</a>
+  </header>
+
+
+  <div class="work-block">
+    <img src="img/a1.png" alt="Amtrak 1">
+    <div class="work-title">Amtrak — 1</div>
+  </div>
+
+  <div class="work-block">
+    <img src="img/a2.png" alt="Amtrak 2">
+    <div class="work-title">Amtrak — 2</div>
+  </div>
+
+  <div class="work-block">
+    <img src="img/a3.png" alt="Amtrak 3">
+    <div class="work-title">Amtrak — 3</div>
+  </div>
+
+  <div class="work-block">
+    <img src="img/a4.png" alt="Amtrak 4">
+    <div class="work-title">Amtrak — 4</div>
+  </div>
+
+  <div class="work-block">
+    <img src="img/a5.png" alt="Amtrak 5">
+    <div class="work-title">Amtrak — 5</div>
+  </div>
+
+  <div class="work-block">
+    <img src="img/a6.png" alt="Amtrak 6">
+    <div class="work-title">Amtrak — 6</div>
+  </div>
+
+  <div class="work-block">
+    <img src="img/a7.png" alt="Amtrak 7">
+    <div class="work-title">Amtrak — 7</div>
+  </div>
+
+  <div class="work-block">
+    <img src="img/a8.png" alt="Amtrak 8">
+    <div class="work-title">Amtrak — 8</div>
+  </div>
+
+</div>
+
+</body>
+</html>
