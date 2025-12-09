@@ -20,7 +20,7 @@
     #preview {
       image-rendering: pixelated;
       image-rendering: crisp-edges;
-      width: 384px;   /* 4× scale preview */
+      width: 384px;
       height: 128px;
       border: 1px solid #555;
     }
@@ -36,112 +36,88 @@
     }
   </style>
 
-  <!-- gif.js core -->
   <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js"></script>
 </head>
 <body>
-  <h2>Penn T – Shovel in the Ground Countdown GIF</h2>
-  <p>Target date: <strong>December 1, 2027</strong></p>
 
-  <p id="label"></p>
+<h2>Penn T – Shovel in the Ground Countdown GIF</h2>
+<p>Target date: <strong>December 1, 2027</strong></p>
 
-  <div id="previewWrapper">
-    <canvas id="preview" width="96" height="32"></canvas>
-  </div>
+<p id="label"></p>
 
-  <div>
-    <button id="generateBtn">Generate GIF</button>
-  </div>
+<div id="previewWrapper">
+  <canvas id="preview" width="96" height="32"></canvas>
+</div>
 
-  <div class="status" id="status">Ready.</div>
+<button id="generateBtn">Generate GIF</button>
+
+<div class="status" id="status">Ready.</div>
 
 <script>
 const WIDTH = 96;
 const HEIGHT = 32;
 const TARGET = new Date("2027-12-01T00:00:00-05:00");
-const COLOR = "#00ff00";  // neon-ish green
+const COLOR = "#00ff00";
+
 const TOP_TEXT = "Shovel in the Ground...";
-const CURSOR_HEIGHT = 5;
+
+// No cursor
+const CURSOR_ENABLED = false;
+
+// Compute months + weeks
+function computeMW() {
+  const now = new Date();
+  let months = (TARGET.getFullYear() - now.getFullYear()) * 12 +
+               (TARGET.getMonth() - now.getMonth());
+
+  const test = new Date(now.getFullYear(), now.getMonth() + months, now.getDate());
+  if (test > TARGET) months--;
+
+  const temp = new Date(now.getFullYear(), now.getMonth() + months, now.getDate());
+  const diff = TARGET - temp;
+  const weeks = Math.floor(diff / (7 * 24 * 60 * 60 * 1000));
+  return `${months} months, ${weeks} weeks`;
+}
 
 const canvas = document.getElementById("preview");
 const ctx = canvas.getContext("2d");
 
-// ---- months & weeks label ----
-function computeMonthsWeeks() {
-  const now = new Date();
-
-  let months = (TARGET.getFullYear() - now.getFullYear()) * 12 +
-               (TARGET.getMonth() - now.getMonth());
-
-  const candidate = new Date(now.getFullYear(), now.getMonth() + months, now.getDate());
-  if (candidate > TARGET) {
-    months--;
-  }
-
-  const temp = new Date(now.getFullYear(), now.getMonth() + months, now.getDate());
-  const msDiff = TARGET - temp;
-  const weeks = Math.max(0, Math.floor(msDiff / (7 * 24 * 60 * 60 * 1000)));
-
-  return { months: Math.max(0, months), weeks };
-}
-
-function getLabel() {
-  const { months, weeks } = computeMonthsWeeks();
-  return `${months} months, ${weeks} weeks`;
-}
-
-// ---- preview drawing ----
 function drawPreview() {
-  const label = getLabel();
-  document.getElementById("label").textContent =
-    `Label for today: "${label}"`;
+  const label = computeMW();
+  document.getElementById("label").innerText = `Label for today: "${label}"`;
 
-  ctx.fillStyle = "#000000";
+  ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-  ctx.fillStyle = COLOR;
-
-  // top line — slightly bold, but not outlined
-  const fontTop = "bold 9px Arial";
+  // TOP LINE — bigger but clean
+  const fontTop = "9px Arial";
   ctx.font = fontTop;
+  ctx.fillStyle = COLOR;
   const topW = ctx.measureText(TOP_TEXT).width;
-  const topX = Math.round((WIDTH - topW) / 2);
-  const topY = 10;
-  ctx.fillText(TOP_TEXT, topX, topY);
+  const topX = (WIDTH - topW) / 2;
+  ctx.fillText(TOP_TEXT, topX, 10);
 
-  // bottom line — larger, bold
-  const fontBottom = "bold 11px Arial";
+  // BOTTOM LINE — larger
+  const fontBottom = "12px Arial";
   ctx.font = fontBottom;
   const bottomW = ctx.measureText(label).width;
-  const bottomX = Math.round((WIDTH - bottomW) / 2);
-  const bottomY = HEIGHT - 2;
-  ctx.fillText(label, bottomX, bottomY);
-
-  // short yellow cursor
-  ctx.fillStyle = "#ffff00";
-  ctx.fillRect(8, 14, 2, CURSOR_HEIGHT);
+  const bottomX = (WIDTH - bottomW) / 2;
+  ctx.fillText(label, bottomX, HEIGHT - 2);
 }
 
 drawPreview();
 
-// ---- GIF generation ----
-document.getElementById("generateBtn").addEventListener("click", () => {
+document.getElementById("generateBtn").onclick = () => {
   const status = document.getElementById("status");
-  status.textContent = "Generating GIF… please wait.";
+  status.textContent = "Generating GIF…";
 
-  const label = getLabel();
-
-  if (typeof GIF === "undefined") {
-    status.textContent = "Error: gif.js did not load.";
-    return;
-  }
-
+  const label = computeMW();
   const gif = new GIF({
     workers: 2,
     quality: 10,
     width: WIDTH,
     height: HEIGHT,
-    workerScript: "gif.worker.js"  // local worker on meetmehalfwei.art
+    workerScript: "gif.worker.js"
   });
 
   const tempCanvas = document.createElement("canvas");
@@ -149,39 +125,29 @@ document.getElementById("generateBtn").addEventListener("click", () => {
   tempCanvas.height = HEIGHT;
   const tctx = tempCanvas.getContext("2d");
 
-  const fontTop = "bold 9px Arial";
-  const fontBottom = "bold 11px Arial";
+  const fontTop = "9px Arial";
+  const fontBottom = "12px Arial";
 
-  // measure bottom text width for scrolling
   tctx.font = fontBottom;
-  const bottomWidth = tctx.measureText(label).width;
+  const textWidth = tctx.measureText(label).width;
   const startX = WIDTH;
-  const endX = -bottomWidth;
-  const step = 2;
-  const bottomY = HEIGHT - 2;
+  const endX = -textWidth;
 
-  for (let x = startX; x > endX; x -= step) {
-    tctx.fillStyle = "#000000";
+  for (let x = startX; x > endX; x -= 2) {
+    tctx.fillStyle = "#000";
     tctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-    tctx.fillStyle = COLOR;
-
-    // top text
+    // TOP
     tctx.font = fontTop;
+    tctx.fillStyle = COLOR;
     const topW = tctx.measureText(TOP_TEXT).width;
-    const topX = Math.round((WIDTH - topW) / 2);
-    const topY = 10;
-    tctx.fillText(TOP_TEXT, topX, topY);
+    tctx.fillText(TOP_TEXT, (WIDTH - topW) / 2, 10);
 
-    // scrolling bottom text
+    // SCROLLING BOTTOM
     tctx.font = fontBottom;
-    tctx.fillText(label, x, bottomY);
+    tctx.fillText(label, x, HEIGHT - 2);
 
-    // short yellow cursor
-    tctx.fillStyle = "#ffff00";
-    tctx.fillRect(8, 14, 2, CURSOR_HEIGHT);
-
-    gif.addFrame(tempCanvas, { copy: true, delay: 80 });
+    gif.addFrame(tctx, { copy: true, delay: 80 });
   }
 
   gif.on("finished", blob => {
@@ -189,15 +155,12 @@ document.getElementById("generateBtn").addEventListener("click", () => {
     const a = document.createElement("a");
     a.href = url;
     a.download = "penn_countdown.gif";
-    document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    status.textContent = "Done. GIF downloaded as penn_countdown.gif.";
+    status.textContent = "Done. Uploaded file is ready.";
   });
 
   gif.render();
-});
+};
 </script>
 </body>
 </html>
