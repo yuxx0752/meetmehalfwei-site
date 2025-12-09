@@ -97,17 +97,17 @@ function drawPreview() {
   ctx.fillStyle = COLOR;
 
   // top line
-  ctx.font = "8px Arial";
+  ctx.font = "12px Arial";
   const topW = ctx.measureText(TOP_TEXT).width;
   const topX = Math.round((WIDTH - topW) / 2);
-  const topY = 9;
+  const topY = 10;
   ctx.fillText(TOP_TEXT, topX, topY);
 
   // bottom line
   ctx.font = "10px Arial";
   const bottomW = ctx.measureText(label).width;
   const bottomX = Math.round((WIDTH - bottomW) / 2);
-  const bottomY = HEIGHT - 4;
+  const bottomY = HEIGHT - 2;
   ctx.fillText(label, bottomX, bottomY);
 }
 
