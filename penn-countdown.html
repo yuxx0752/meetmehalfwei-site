@@ -59,10 +59,8 @@ const HEIGHT = 32;
 const TARGET = new Date("2027-12-01T00:00:00-05:00");
 const COLOR = "#00ff00";
 
+// Text
 const TOP_TEXT = "Shovel in the Ground...";
-
-// No cursor
-const CURSOR_ENABLED = false;
 
 // Compute months + weeks
 function computeMW() {
@@ -89,20 +87,23 @@ function drawPreview() {
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-  // TOP LINE — bigger but clean
+  ctx.fillStyle = COLOR;
+
+  // TOP LINE — 9px, baseline at y=11
   const fontTop = "9px Arial";
   ctx.font = fontTop;
-  ctx.fillStyle = COLOR;
   const topW = ctx.measureText(TOP_TEXT).width;
   const topX = (WIDTH - topW) / 2;
-  ctx.fillText(TOP_TEXT, topX, 10);
+  const topY = 11;
+  ctx.fillText(TOP_TEXT, topX, topY);
 
-  // BOTTOM LINE — larger
+  // BOTTOM LINE — 12px, baseline at y=24 (closer gap)
   const fontBottom = "12px Arial";
   ctx.font = fontBottom;
   const bottomW = ctx.measureText(label).width;
   const bottomX = (WIDTH - bottomW) / 2;
-  ctx.fillText(label, bottomX, HEIGHT - 2);
+  const bottomY = 24;
+  ctx.fillText(label, bottomX, bottomY);
 }
 
 drawPreview();
@@ -117,7 +118,7 @@ document.getElementById("generateBtn").onclick = () => {
     quality: 10,
     width: WIDTH,
     height: HEIGHT,
-    workerScript: "gif.worker.js"
+    workerScript: "gif.worker.js"   // local worker on meetmehalfwei.art
   });
 
   const tempCanvas = document.createElement("canvas");
@@ -128,12 +129,15 @@ document.getElementById("generateBtn").onclick = () => {
   const fontTop = "9px Arial";
   const fontBottom = "12px Arial";
 
+  // measure bottom text width for scrolling
   tctx.font = fontBottom;
   const textWidth = tctx.measureText(label).width;
   const startX = WIDTH;
   const endX = -textWidth;
+  const step = 2;
+  const bottomY = 24;   // match preview
 
-  for (let x = startX; x > endX; x -= 2) {
+  for (let x = startX; x > endX; x -= step) {
     tctx.fillStyle = "#000";
     tctx.fillRect(0, 0, WIDTH, HEIGHT);
 
@@ -141,22 +145,34 @@ document.getElementById("generateBtn").onclick = () => {
     tctx.font = fontTop;
     tctx.fillStyle = COLOR;
     const topW = tctx.measureText(TOP_TEXT).width;
-    tctx.fillText(TOP_TEXT, (WIDTH - topW) / 2, 10);
+    const topX = (WIDTH - topW) / 2;
+    const topY = 11;
+    tctx.fillText(TOP_TEXT, topX, topY);
 
     // SCROLLING BOTTOM
     tctx.font = fontBottom;
-    tctx.fillText(label, x, HEIGHT - 2);
+    tctx.fillText(label, x, bottomY);
 
     gif.addFrame(tctx, { copy: true, delay: 80 });
   }
 
   gif.on("finished", blob => {
+    // filename with today's date: penn_countdown_YYYY-MM-DD.gif
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    const filename = `penn_countdown_${y}-${m}-${d}.gif`;
+
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "penn_countdown.gif";
+    a.download = filename;
+    document.body.appendChild(a);
     a.click();
-    status.textContent = "Done. Uploaded file is ready.";
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    status.textContent = `Done. GIF downloaded as ${filename}.`;
   });
 
   gif.render();
