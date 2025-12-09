@@ -19,6 +19,9 @@
     }
     #preview {
       image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      width: 384px;   /* 4× scale preview */
+      height: 128px;
       border: 1px solid #555;
     }
     button {
@@ -33,48 +36,69 @@
     }
   </style>
 
-  <!-- gif.js from CDN (works fine over https) -->
+  <!-- gif.js core (library) -->
   <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js"></script>
 </head>
 <body>
   <h2>Penn T – Shovel in the Ground Countdown GIF</h2>
   <p>Target date: <strong>December 1, 2027</strong></p>
-  <p>This page calculates <code>X months, Y weeks</code> from today, shows a preview,
-     and generates a <strong>96×32 green-on-black animated GIF</strong> for your LED sign.</p>
 
-  <div id="label"></div>
+  <p id="label"></p>
 
   <div id="previewWrapper">
     <canvas id="preview" width="96" height="32"></canvas>
   </div>
 
-  <div><button id="generateBtn">Generate GIF</button></div>
+  <div>
+    <button id="generateBtn">Generate GIF</button>
+  </div>
 
-  <div class="status" id="status"></div>
+  <div class="status" id="status">Ready.</div>
 
 <script>
 const WIDTH = 96;
 const HEIGHT = 32;
 const TARGET = new Date("2027-12-01T00:00:00-05:00");
-const canvas = document.getElementById('preview');
-const ctx = canvas.getContext('2d');
-
+const COLOR = "#00ff00";  // neon green
 const TOP_TEXT = "Shovel in the Ground...";
-const COLOR = "#00ff00";
-const BG = "#000000";
+const CURSOR_HEIGHT = 6;  // shorter yellow bar
 
+const canvas = document.getElementById("preview");
+const ctx = canvas.getContext("2d");
+
+// ---- fake-bold text helper ----
+function drawBoldText(context, text, x, y, font, color) {
+  context.font = font;
+  context.fillStyle = color;
+
+  const offsets = [
+    [-1, 0], [1, 0],
+    [0, -1], [0, 1],
+    [-1, -1], [1, -1],
+    [-1, 1], [1, 1]
+  ];
+
+  offsets.forEach(([dx, dy]) => {
+    context.fillText(text, x + dx, y + dy);
+  });
+
+  context.fillText(text, x, y);
+}
+
+// ---- months & weeks label ----
 function computeMonthsWeeks() {
   const now = new Date();
 
   let months = (TARGET.getFullYear() - now.getFullYear()) * 12 +
                (TARGET.getMonth() - now.getMonth());
 
-  let temp = new Date(now.getFullYear(), now.getMonth() + months, now.getDate());
-  if (temp > TARGET) {
+  // adjust months if we've passed the day in this month
+  const candidate = new Date(now.getFullYear(), now.getMonth() + months, now.getDate());
+  if (candidate > TARGET) {
     months--;
-    temp = new Date(now.getFullYear(), now.getMonth() + months, now.getDate());
   }
 
+  const temp = new Date(now.getFullYear(), now.getMonth() + months, now.getDate());
   const msDiff = TARGET - temp;
   const weeks = Math.max(0, Math.floor(msDiff / (7 * 24 * 60 * 60 * 1000)));
 
@@ -86,35 +110,42 @@ function getLabel() {
   return `${months} months, ${weeks} weeks`;
 }
 
+// ---- preview drawing ----
 function drawPreview() {
   const label = getLabel();
-  document.getElementById('label').textContent =
+  document.getElementById("label").textContent =
     `Label for today: "${label}"`;
 
-  ctx.fillStyle = BG;
+  // background
+  ctx.fillStyle = "#000000";
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-  ctx.fillStyle = COLOR;
-
   // top line
-  ctx.font = "12px Arial";
+  const fontTop = "10px Consolas";
+  ctx.font = fontTop;
   const topW = ctx.measureText(TOP_TEXT).width;
   const topX = Math.round((WIDTH - topW) / 2);
-  const topY = 10;
-  ctx.fillText(TOP_TEXT, topX, topY);
+  const topY = 11;
+  drawBoldText(ctx, TOP_TEXT, topX, topY, fontTop, COLOR);
 
   // bottom line
-  ctx.font = "10px Arial";
+  const fontBottom = "12px Consolas";
+  ctx.font = fontBottom;
   const bottomW = ctx.measureText(label).width;
   const bottomX = Math.round((WIDTH - bottomW) / 2);
   const bottomY = HEIGHT - 2;
-  ctx.fillText(label, bottomX, bottomY);
+  drawBoldText(ctx, label, bottomX, bottomY, fontBottom, COLOR);
+
+  // short yellow cursor for style
+  ctx.fillStyle = "#ffff00";
+  ctx.fillRect(8, 14, 2, CURSOR_HEIGHT);
 }
 
 drawPreview();
 
-document.getElementById('generateBtn').addEventListener('click', () => {
-  const status = document.getElementById('status');
+// ---- GIF generation ----
+document.getElementById("generateBtn").addEventListener("click", () => {
+  const status = document.getElementById("status");
   status.textContent = "Generating GIF… please wait.";
 
   const label = getLabel();
@@ -129,52 +160,58 @@ document.getElementById('generateBtn').addEventListener('click', () => {
     quality: 10,
     width: WIDTH,
     height: HEIGHT,
-    workerScript: "gif.worker.js"   // now served from meetmehalfwei.art
+    workerScript: "gif.worker.js"  // local worker file on meetmehalfwei.art
   });
 
-  const tmp = document.createElement('canvas');
-  tmp.width = WIDTH;
-  tmp.height = HEIGHT;
-  const tctx = tmp.getContext('2d');
+  const tempCanvas = document.createElement("canvas");
+  tempCanvas.width = WIDTH;
+  tempCanvas.height = HEIGHT;
+  const tctx = tempCanvas.getContext("2d");
 
-  const topFont = "8px Arial";
-  const bottomFont = "10px Arial";
+  const fontTop = "10px Consolas";
+  const fontBottom = "12px Consolas";
 
-  tctx.font = bottomFont;
+  // measure bottom text width
+  tctx.font = fontBottom;
   const bottomWidth = tctx.measureText(label).width;
   const startX = WIDTH;
   const endX = -bottomWidth;
   const step = 2;
-  const bottomY = HEIGHT - 4;
+  const bottomY = HEIGHT - 2;
 
   for (let x = startX; x > endX; x -= step) {
-    tctx.fillStyle = BG;
+    // clear frame
+    tctx.fillStyle = "#000000";
     tctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-    tctx.fillStyle = COLOR;
-    tctx.font = topFont;
+    // top text
+    tctx.font = fontTop;
     const topW = tctx.measureText(TOP_TEXT).width;
     const topX = Math.round((WIDTH - topW) / 2);
-    const topY = 9;
-    tctx.fillText(TOP_TEXT, topX, topY);
+    const topY = 11;
+    drawBoldText(tctx, TOP_TEXT, topX, topY, fontTop, COLOR);
 
-    tctx.font = bottomFont;
-    tctx.fillText(label, x, bottomY);
+    // scrolling bottom text
+    tctx.font = fontBottom;
+    drawBoldText(tctx, label, x, bottomY, fontBottom, COLOR);
 
-    gif.addFrame(tmp, { copy: true, delay: 80 });
+    // short yellow cursor
+    tctx.fillStyle = "#ffff00";
+    tctx.fillRect(8, 14, 2, CURSOR_HEIGHT);
+
+    gif.addFrame(tempCanvas, { copy: true, delay: 80 });
   }
 
-  gif.on('finished', blob => {
-    status.textContent = "GIF ready — downloading…";
+  gif.on("finished", blob => {
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = "penn_countdown.gif";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    status.textContent = "Done. Upload penn_countdown.gif to the LED app.";
+    status.textContent = "Done. GIF downloaded as penn_countdown.gif.";
   });
 
   gif.render();
