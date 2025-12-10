@@ -20,7 +20,7 @@
     #preview {
       image-rendering: pixelated;
       image-rendering: crisp-edges;
-      width: 384px;
+      width: 384px;   /* 4× scale for preview */
       height: 128px;
       border: 1px solid #555;
     }
@@ -36,6 +36,7 @@
     }
   </style>
 
+  <!-- gif.js core library -->
   <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js"></script>
 </head>
 <body>
@@ -58,38 +59,62 @@ const WIDTH = 96;
 const HEIGHT = 32;
 const TARGET = new Date("2027-12-01T00:00:00-05:00");
 const COLOR = "#00ff00";
-
-// Text
 const TOP_TEXT = "Shovel in the Ground...";
 
-// Compute months + weeks
-function computeMW() {
+// ---- Countdown: years, months, weeks ----
+function computeYMWText() {
   const now = new Date();
-  let months = (TARGET.getFullYear() - now.getFullYear()) * 12 +
-               (TARGET.getMonth() - now.getMonth());
 
-  const test = new Date(now.getFullYear(), now.getMonth() + months, now.getDate());
-  if (test > TARGET) months--;
+  // if we've passed the date, clamp to zeros
+  if (now >= TARGET) {
+    return "0 years, 0 months, 0 weeks";
+  }
 
-  const temp = new Date(now.getFullYear(), now.getMonth() + months, now.getDate());
-  const diff = TARGET - temp;
-  const weeks = Math.floor(diff / (7 * 24 * 60 * 60 * 1000));
-  return `${months} months, ${weeks} weeks`;
+  // Work with date-only copies (ignore hours/minutes)
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const end   = new Date(TARGET.getFullYear(), TARGET.getMonth(), TARGET.getDate());
+
+  let years  = end.getFullYear() - start.getFullYear();
+  let months = end.getMonth() - start.getMonth();
+  let days   = end.getDate() - start.getDate();
+
+  // Fix negative days by borrowing a month
+  if (days < 0) {
+    months -= 1;
+    const prevMonthDays = new Date(end.getFullYear(), end.getMonth(), 0).getDate();
+    days += prevMonthDays;
+  }
+
+  // Fix negative months by borrowing a year
+  if (months < 0) {
+    years -= 1;
+    months += 12;
+  }
+
+  const weeks = Math.floor(days / 7);
+
+  const yStr = `${years} year${years === 1 ? "" : "s"}`;
+  const mStr = `${months} month${months === 1 ? "" : "s"}`;
+  const wStr = `${weeks} week${weeks === 1 ? "" : "s"}`;
+
+  return `${yStr}, ${mStr}, ${wStr}`;
 }
 
 const canvas = document.getElementById("preview");
 const ctx = canvas.getContext("2d");
 
+// ---- Preview drawing ----
 function drawPreview() {
-  const label = computeMW();
-  document.getElementById("label").innerText = `Label for today: "${label}"`;
+  const labelText = computeYMWText();
+  document.getElementById("label").innerText =
+    `Label for today: "${labelText}"`;
 
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
   ctx.fillStyle = COLOR;
 
-  // TOP LINE — 9px, baseline at y=11
+  // Top line (9px font, baseline y=11)
   const fontTop = "9px Arial";
   ctx.font = fontTop;
   const topW = ctx.measureText(TOP_TEXT).width;
@@ -97,22 +122,24 @@ function drawPreview() {
   const topY = 11;
   ctx.fillText(TOP_TEXT, topX, topY);
 
-  // BOTTOM LINE — 12px, baseline at y=24 (closer gap)
+  // Bottom line (12px font, baseline y=24) – closer gap
   const fontBottom = "12px Arial";
   ctx.font = fontBottom;
-  const bottomW = ctx.measureText(label).width;
+  const bottomW = ctx.measureText(labelText).width;
   const bottomX = (WIDTH - bottomW) / 2;
   const bottomY = 24;
-  ctx.fillText(label, bottomX, bottomY);
+  ctx.fillText(labelText, bottomX, bottomY);
 }
 
 drawPreview();
 
+// ---- GIF generation ----
 document.getElementById("generateBtn").onclick = () => {
   const status = document.getElementById("status");
   status.textContent = "Generating GIF…";
 
-  const label = computeMW();
+  const labelText = computeYMWText();
+
   const gif = new GIF({
     workers: 2,
     quality: 10,
@@ -129,9 +156,9 @@ document.getElementById("generateBtn").onclick = () => {
   const fontTop = "9px Arial";
   const fontBottom = "12px Arial";
 
-  // measure bottom text width for scrolling
+  // Measure scrolling text width
   tctx.font = fontBottom;
-  const textWidth = tctx.measureText(label).width;
+  const textWidth = tctx.measureText(labelText).width;
   const startX = WIDTH;
   const endX = -textWidth;
   const step = 2;
@@ -141,7 +168,7 @@ document.getElementById("generateBtn").onclick = () => {
     tctx.fillStyle = "#000";
     tctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-    // TOP
+    // Top text
     tctx.font = fontTop;
     tctx.fillStyle = COLOR;
     const topW = tctx.measureText(TOP_TEXT).width;
@@ -149,15 +176,15 @@ document.getElementById("generateBtn").onclick = () => {
     const topY = 11;
     tctx.fillText(TOP_TEXT, topX, topY);
 
-    // SCROLLING BOTTOM
+    // Scrolling bottom text
     tctx.font = fontBottom;
-    tctx.fillText(label, x, bottomY);
+    tctx.fillText(labelText, x, bottomY);
 
     gif.addFrame(tctx, { copy: true, delay: 80 });
   }
 
   gif.on("finished", blob => {
-    // filename with today's date: penn_countdown_YYYY-MM-DD.gif
+    // Filename with today's date: penn_countdown_YYYY-MM-DD.gif
     const now = new Date();
     const y = now.getFullYear();
     const m = String(now.getMonth() + 1).padStart(2, "0");
@@ -172,6 +199,7 @@ document.getElementById("generateBtn").onclick = () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+
     status.textContent = `Done. GIF downloaded as ${filename}.`;
   });
 
