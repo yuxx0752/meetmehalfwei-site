@@ -20,13 +20,14 @@
     #preview {
       image-rendering: pixelated;
       image-rendering: crisp-edges;
-      width: 384px;   /* 4× scale for preview */
+      width: 384px;
       height: 128px;
       border: 1px solid #555;
     }
     button {
       padding: 8px 14px;
       margin-top: 10px;
+      margin-right: 8px;
       cursor: pointer;
     }
     .status {
@@ -36,7 +37,6 @@
     }
   </style>
 
-  <!-- gif.js core library -->
   <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js"></script>
 </head>
 <body>
@@ -50,7 +50,8 @@
   <canvas id="preview" width="96" height="32"></canvas>
 </div>
 
-<button id="generateBtn">Generate GIF</button>
+<button id="generateScrollBtn">Generate Scrolling GIF</button>
+<button id="generateStaticBtn">Generate Static GIF</button>
 
 <div class="status" id="status">Ready.</div>
 
@@ -61,16 +62,11 @@ const TARGET = new Date("2027-12-01T00:00:00-05:00");
 const COLOR = "#00ff00";
 const TOP_TEXT = "Shovel in the Ground...";
 
-// ---- Countdown: years, months, weeks ----
-function computeYMWText() {
+// ---- Compute years, months, weeks ----
+function computeYMW() {
   const now = new Date();
+  if (now >= TARGET) return { years: 0, months: 0, weeks: 0 };
 
-  // if we've passed the date, clamp to zeros
-  if (now >= TARGET) {
-    return "0 years, 0 months, 0 weeks";
-  }
-
-  // Work with date-only copies (ignore hours/minutes)
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const end   = new Date(TARGET.getFullYear(), TARGET.getMonth(), TARGET.getDate());
 
@@ -78,133 +74,191 @@ function computeYMWText() {
   let months = end.getMonth() - start.getMonth();
   let days   = end.getDate() - start.getDate();
 
-  // Fix negative days by borrowing a month
   if (days < 0) {
-    months -= 1;
+    months--;
     const prevMonthDays = new Date(end.getFullYear(), end.getMonth(), 0).getDate();
     days += prevMonthDays;
   }
 
-  // Fix negative months by borrowing a year
   if (months < 0) {
-    years -= 1;
+    years--;
     months += 12;
   }
 
   const weeks = Math.floor(days / 7);
 
-  const yStr = `${years} year${years === 1 ? "" : "s"}`;
-  const mStr = `${months} month${months === 1 ? "" : "s"}`;
-  const wStr = `${weeks} week${weeks === 1 ? "" : "s"}`;
-
-  return `${yStr}, ${mStr}, ${wStr}`;
+  return { years, months, weeks };
 }
 
+// ---- Full text for scrolling version ----
+function computeYMWText() {
+  const { years, months, weeks } = computeYMW();
+  return `${years} year${years === 1 ? "" : "s"}, ${months} month${months === 1 ? "" : "s"}, ${weeks} week${weeks === 1 ? "" : "s"}`;
+}
+
+// ---- Smart shortening for static mode ----
+function computeStaticShortText(ctx, fontBottom) {
+  const { years, months, weeks } = computeYMW();
+
+  const full = computeYMWText();       // "2 years, 7 months, 3 weeks"
+  const med  = `${years}y ${months}m ${weeks}w`;
+  const mid2 = `${years}y ${months}m`;
+  const small = `${years*12 + months}m`;
+
+  const options = [full, med, mid2, small];
+
+  ctx.font = fontBottom;
+
+  for (const opt of options) {
+    if (ctx.measureText(opt).width <= WIDTH - 2) {
+      return opt;
+    }
+  }
+
+  return small; // fallback
+}
+
+// ---- Preview drawing ----
 const canvas = document.getElementById("preview");
 const ctx = canvas.getContext("2d");
 
-// ---- Preview drawing ----
 function drawPreview() {
-  const labelText = computeYMWText();
-  document.getElementById("label").innerText =
-    `Label for today: "${labelText}"`;
+  const fullText = computeYMWText();
+  document.getElementById("label").innerText = `Label for today: "${fullText}"`;
+
+  const fontTop = "9px Arial";
+  const fontBottom = "12px Arial";
 
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
   ctx.fillStyle = COLOR;
 
-  // Top line (9px font, baseline y=11)
-  const fontTop = "9px Arial";
   ctx.font = fontTop;
   const topW = ctx.measureText(TOP_TEXT).width;
-  const topX = (WIDTH - topW) / 2;
-  const topY = 11;
-  ctx.fillText(TOP_TEXT, topX, topY);
+  ctx.fillText(TOP_TEXT, (WIDTH - topW) / 2, 11);
 
-  // Bottom line (12px font, baseline y=24) – closer gap
-  const fontBottom = "12px Arial";
   ctx.font = fontBottom;
-  const bottomW = ctx.measureText(labelText).width;
-  const bottomX = (WIDTH - bottomW) / 2;
-  const bottomY = 24;
-  ctx.fillText(labelText, bottomX, bottomY);
+  const bottomW = ctx.measureText(fullText).width;
+  ctx.fillText(fullText, (WIDTH - bottomW) / 2, 24);
 }
 
 drawPreview();
 
-// ---- GIF generation ----
-document.getElementById("generateBtn").onclick = () => {
-  const status = document.getElementById("status");
-  status.textContent = "Generating GIF…";
+// ---- Today's date for filenames ----
+function todayStamp() {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}-${String(n.getDate()).padStart(2,"0")}`;
+}
 
-  const labelText = computeYMWText();
-
+// ---- Shared GIF builder ----
+function makeGif(filename, addFrames, done) {
   const gif = new GIF({
     workers: 2,
     quality: 10,
     width: WIDTH,
     height: HEIGHT,
-    workerScript: "gif.worker.js"   // local worker on meetmehalfwei.art
+    workerScript: "gif.worker.js"
   });
 
-  const tempCanvas = document.createElement("canvas");
-  tempCanvas.width = WIDTH;
-  tempCanvas.height = HEIGHT;
-  const tctx = tempCanvas.getContext("2d");
-
-  const fontTop = "9px Arial";
-  const fontBottom = "12px Arial";
-
-  // Measure scrolling text width
-  tctx.font = fontBottom;
-  const textWidth = tctx.measureText(labelText).width;
-  const startX = WIDTH;
-  const endX = -textWidth;
-  const step = 2;
-  const bottomY = 24;   // match preview
-
-  for (let x = startX; x > endX; x -= step) {
-    tctx.fillStyle = "#000";
-    tctx.fillRect(0, 0, WIDTH, HEIGHT);
-
-    // Top text
-    tctx.font = fontTop;
-    tctx.fillStyle = COLOR;
-    const topW = tctx.measureText(TOP_TEXT).width;
-    const topX = (WIDTH - topW) / 2;
-    const topY = 11;
-    tctx.fillText(TOP_TEXT, topX, topY);
-
-    // Scrolling bottom text
-    tctx.font = fontBottom;
-    tctx.fillText(labelText, x, bottomY);
-
-    gif.addFrame(tctx, { copy: true, delay: 80 });
-  }
+  addFrames(gif);
 
   gif.on("finished", blob => {
-    // Filename with today's date: penn_countdown_YYYY-MM-DD.gif
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, "0");
-    const d = String(now.getDate()).padStart(2, "0");
-    const filename = `penn_countdown_${y}-${m}-${d}.gif`;
-
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     a.download = filename;
-    document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
     URL.revokeObjectURL(url);
-
-    status.textContent = `Done. GIF downloaded as ${filename}.`;
+    done(filename);
   });
 
   gif.render();
+}
+
+// ---- Scrolling GIF ----
+document.getElementById("generateScrollBtn").onclick = () => {
+  const status = document.getElementById("status");
+  status.textContent = "Generating scrolling GIF…";
+
+  const text = computeYMWText();
+
+  makeGif(
+    `penn_countdown_scroll_${todayStamp()}.gif`,
+    gif => {
+      const temp = document.createElement("canvas");
+      temp.width = WIDTH;
+      temp.height = HEIGHT;
+      const t = temp.getContext("2d");
+
+      const fontTop = "9px Arial";
+      const fontBottom = "12px Arial";
+
+      t.font = fontBottom;
+      const textWidth = t.measureText(text).width;
+      const start = WIDTH;
+      const end = -textWidth;
+
+      for (let x = start; x > end; x -= 2) {
+        t.fillStyle = "#000";
+        t.fillRect(0, 0, WIDTH, HEIGHT);
+
+        // top
+        t.font = fontTop;
+        const topW = t.measureText(TOP_TEXT).width;
+        t.fillStyle = COLOR;
+        t.fillText(TOP_TEXT, (WIDTH - topW) / 2, 11);
+
+        // bottom scroll
+        t.font = fontBottom;
+        t.fillText(text, x, 24);
+
+        gif.addFrame(t, { copy: true, delay: 80 });
+      }
+    },
+    name => status.textContent = `Done. Downloaded ${name}.`
+  );
+};
+
+// ---- Static GIF ----
+document.getElementById("generateStaticBtn").onclick = () => {
+  const status = document.getElementById("status");
+  status.textContent = "Generating static GIF…";
+
+  makeGif(
+    `penn_countdown_static_${todayStamp()}.gif`,
+    gif => {
+      const temp = document.createElement("canvas");
+      temp.width = WIDTH;
+      temp.height = HEIGHT;
+      const t = temp.getContext("2d");
+
+      const fontTop = "9px Arial";
+      const fontBottom = "12px Arial";
+
+      // Choose shortened text that fits
+      const shortText = computeStaticShortText(t, fontBottom);
+
+      t.fillStyle = "#000";
+      t.fillRect(0, 0, WIDTH, HEIGHT);
+
+      // top
+      t.font = fontTop;
+      t.fillStyle = COLOR;
+      const topW = t.measureText(TOP_TEXT).width;
+      t.fillText(TOP_TEXT, (WIDTH - topW) / 2, 11);
+
+      // bottom (centered static)
+      t.font = fontBottom;
+      const bw = t.measureText(shortText).width;
+      t.fillText(shortText, (WIDTH - bw) / 2, 24);
+
+      gif.addFrame(t, { copy: true, delay: 1500 });
+    },
+    name => status.textContent = `Done. Downloaded ${name}.`
+  );
 };
 </script>
+
 </body>
 </html>
