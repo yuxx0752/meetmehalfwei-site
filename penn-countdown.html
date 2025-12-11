@@ -60,9 +60,12 @@
 const WIDTH = 96;
 const HEIGHT = 32;
 const COLOR = "#00ff00";
-const TOP_TEXT = "Shovel in the Ground...";
+
+// NEW: remove ellipsis for static & preview
+const TOP_TEXT = "Shovel in the Ground";
+
 const TARGET = new Date("2027-12-01T00:00:00-05:00");
-const LEFT_X = 1; // left margin in pixels
+const LEFT_X = 1;
 
 // ===== DATE MATH =====
 function computeYMW() {
@@ -94,7 +97,8 @@ function computeYMW() {
 function computeThreeLineStatic() {
   const { years, months, weeks } = computeYMW();
   return {
-    line1: `${years} year${years === 1 ? "" : "s"}, ${months} month${months === 1 ? "" : "s"}`,
+    // UPDATED: guarantee comma after months
+    line1: `${years} year${years === 1 ? "" : "s"}, ${months} month${months === 1 ? "" : "s"},`,
     line2: `${weeks} week${weeks === 1 ? "" : "s"}`
   };
 }
@@ -127,16 +131,16 @@ function drawPreview() {
   pctx.fillStyle = "#000";
   pctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-  // Top headline (10px), LEFT aligned
+  // Top headline LEFT aligned
   pctx.font = "10px Arial";
   pctx.fillStyle = COLOR;
   pctx.fillText(TOP_TEXT, LEFT_X, 10);
 
-  // Line 2 (years, months), LEFT aligned
+  // Line 1
   pctx.font = "9px Arial";
   pctx.fillText(line1, LEFT_X, 20);
 
-  // Line 3 (weeks), LEFT aligned
+  // Line 2
   pctx.fillText(line2, LEFT_X, 30);
 }
 
@@ -167,7 +171,7 @@ function makeGif(name, frameCallback, done) {
   gif.render();
 }
 
-// ===== SCROLLING GIF =====
+// ===== SCROLLING GIF (keeps ellipsis unless you say otherwise) =====
 document.getElementById("generateScrollBtn").onclick = () => {
   const status = document.getElementById("status");
   status.textContent = "Generating scrolling GIF…";
@@ -184,6 +188,7 @@ document.getElementById("generateScrollBtn").onclick = () => {
       c.height = HEIGHT;
       const ctx = c.getContext("2d");
 
+      const SCROLL_HEADER = "Shovel in the Ground..."; // unchanged
       ctx.font = "12px Arial";
       const w = ctx.measureText(scrollText).width;
 
@@ -191,12 +196,12 @@ document.getElementById("generateScrollBtn").onclick = () => {
         ctx.fillStyle = "#000";
         ctx.fillRect(0,0,WIDTH,HEIGHT);
 
-        // Top line LEFT aligned
+        // Header
         ctx.font = "10px Arial";
         ctx.fillStyle = COLOR;
-        ctx.fillText(TOP_TEXT, LEFT_X, 10);
+        ctx.fillText(SCROLL_HEADER, LEFT_X, 10);
 
-        // Scrolling text along bottom
+        // Scrolling bottom line
         ctx.font = "12px Arial";
         ctx.fillText(scrollText, x, 27);
 
@@ -207,7 +212,7 @@ document.getElementById("generateScrollBtn").onclick = () => {
   );
 };
 
-// ===== STATIC 3-LINE GIF (LEFT ALIGNED) =====
+// ===== STATIC 3-LINE GIF (LEFT ALIGNED + comma fix + no ellipsis) =====
 document.getElementById("generateStaticBtn").onclick = () => {
   const status = document.getElementById("status");
   status.textContent = "Generating static GIF…";
@@ -225,16 +230,16 @@ document.getElementById("generateStaticBtn").onclick = () => {
       ctx.fillStyle = "#000";
       ctx.fillRect(0,0,WIDTH,HEIGHT);
 
-      // ---- TOP LINE (max 10px), LEFT aligned ----
+      // ---- TOP LINE — no ellipsis ----
       ctx.font = fitFont(ctx, TOP_TEXT, WIDTH - 2, [10, 9, 8]);
       ctx.fillStyle = COLOR;
       ctx.fillText(TOP_TEXT, LEFT_X, 9);
 
-      // ---- MIDDLE LINE, LEFT aligned ----
+      // ---- MIDDLE LINE (with comma) ----
       ctx.font = fitFont(ctx, line1, WIDTH - 2, [9, 8]);
       ctx.fillText(line1, LEFT_X, 20);
 
-      // ---- BOTTOM LINE, LEFT aligned ----
+      // ---- BOTTOM LINE ----
       ctx.font = fitFont(ctx, line2, WIDTH - 2, [9, 8]);
       ctx.fillText(line2, LEFT_X, 30);
 
