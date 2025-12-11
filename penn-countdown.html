@@ -58,9 +58,9 @@
 <script>
 const WIDTH = 96;
 const HEIGHT = 32;
-const TARGET = new Date("2027-12-01T00:00:00-05:00");
 const COLOR = "#00ff00";
 const TOP_TEXT = "Shovel in the Ground...";
+const TARGET = new Date("2027-12-01T00:00:00-05:00");
 
 // ---- Compute years, months, weeks ----
 function computeYMW() {
@@ -76,8 +76,8 @@ function computeYMW() {
 
   if (days < 0) {
     months--;
-    const prevMonthDays = new Date(end.getFullYear(), end.getMonth(), 0).getDate();
-    days += prevMonthDays;
+    const prev = new Date(end.getFullYear(), end.getMonth(), 0).getDate();
+    days += prev;
   }
 
   if (months < 0) {
@@ -90,73 +90,71 @@ function computeYMW() {
   return { years, months, weeks };
 }
 
-// Full, spelled-out label: "1 year, 11 months, 2 weeks"
-function computeYMWText() {
-  const { years, months, weeks } = computeYMW();
-  const yStr = `${years} year${years === 1 ? "" : "s"}`;
-  const mStr = `${months} month${months === 1 ? "" : "s"}`;
-  const wStr = `${weeks} week${weeks === 1 ? "" : "s"}`;
-  return `${yStr}, ${mStr}, ${wStr}`;
-}
-
-// Choose the largest font size for static mode that fits width
-function chooseStaticFont(ctx, baseFamily = "Arial") {
-  const text = computeYMWText();
-  const sizes = [12, 11, 10, 9, 8];  // largest → smallest
-
-  for (const s of sizes) {
-    ctx.font = `${s}px ${baseFamily}`;
-    if (ctx.measureText(text).width <= WIDTH - 2) {
-      return { font: `${s}px ${baseFamily}`, text };
-    }
-  }
-  // Worst case, smallest size
-  ctx.font = `8px ${baseFamily}`;
-  return { font: `8px ${baseFamily}`, text };
-}
-
-// ---- Preview drawing ----
-const canvas = document.getElementById("preview");
-const ctx = canvas.getContext("2d");
-
-function drawPreview() {
-  const fullText = computeYMWText();
-  document.getElementById("label").innerText =
-    `Label for today: "${fullText}"`;
-
-  ctx.fillStyle = "#000";
-  ctx.fillRect(0, 0, WIDTH, HEIGHT);
-
-  ctx.fillStyle = COLOR;
-
-  const fontTop = "9px Arial";
-  ctx.font = fontTop;
-  const topW = ctx.measureText(TOP_TEXT).width;
-  ctx.fillText(TOP_TEXT, (WIDTH - topW) / 2, 11);
-
-  // preview uses a fixed font for the bottom
-  const fontBottom = "12px Arial";
-  ctx.font = fontBottom;
-  const bottomW = ctx.measureText(fullText).width;
-  ctx.fillText(fullText, (WIDTH - bottomW) / 2, 24);
-}
-
-drawPreview();
-
-// ---- Utility: today's date for filenames ----
 function todayStamp() {
   const n = new Date();
   return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}-${String(n.getDate()).padStart(2,"0")}`;
 }
 
-// ---- Shared GIF builder ----
-function makeGif(filename, addFrames, done) {
+// Prepares three-line static text
+function computeThreeLineStatic() {
+  const { years, months, weeks } = computeYMW();
+
+  return {
+    line1: `${years} year${years === 1 ? "" : "s"}, ${months} month${months === 1 ? "" : "s"}`,
+    line2: `${weeks} week${weeks === 1 ? "" : "s"}`
+  };
+}
+
+// Chooses an auto-fitting font size for a line
+function fitFont(ctx, text, maxWidth, sizes = [12, 11, 10, 9, 8]) {
+  for (const s of sizes) {
+    ctx.font = `${s}px Arial`;
+    if (ctx.measureText(text).width <= maxWidth) {
+      return `${s}px Arial`;
+    }
+  }
+  return `8px Arial`;
+}
+
+// ---- DRAW PREVIEW ----
+const preview = document.getElementById("preview");
+const pctx = preview.getContext("2d");
+
+function drawPreview() {
+  const { line1, line2 } = computeThreeLineStatic();
+  const fullLabel = `${line1} | ${line2}`;
+  document.getElementById("label").innerText = `Label for today: "${fullLabel}"`;
+
+  pctx.fillStyle = "#000";
+  pctx.fillRect(0,0,WIDTH,HEIGHT);
+
+  // Top line
+  pctx.fillStyle = COLOR;
+  pctx.font = "9px Arial";
+  const tw = pctx.measureText(TOP_TEXT).width;
+  pctx.fillText(TOP_TEXT, (WIDTH - tw)/2, 9);
+
+  // Middle (years + months)
+  pctx.font = "9px Arial";
+  const m = pctx.measureText(line1).width;
+  pctx.fillText(line1, (WIDTH - m)/2, 19);
+
+  // Bottom (weeks)
+  pctx.font = "9px Arial";
+  const w = pctx.measureText(line2).width;
+  pctx.fillText(line2, (WIDTH - w)/2, 29);
+}
+
+drawPreview();
+
+// ---- GIF creation helper ----
+function makeGif(name, addFrames, finish) {
   const gif = new GIF({
     workers: 2,
     quality: 10,
     width: WIDTH,
     height: HEIGHT,
-    workerScript: "gif.worker.js"   // local worker file on your site
+    workerScript: "gif.worker.js"
   });
 
   addFrames(gif);
@@ -165,98 +163,97 @@ function makeGif(filename, addFrames, done) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = filename;
+    a.download = name;
     a.click();
     URL.revokeObjectURL(url);
-    done(filename);
+
+    finish(name);
   });
 
   gif.render();
 }
 
-// ---- Scrolling GIF (full text) ----
+
+// ---- SCROLLING GIF (unchanged) ----
 document.getElementById("generateScrollBtn").onclick = () => {
   const status = document.getElementById("status");
   status.textContent = "Generating scrolling GIF…";
 
-  const text = computeYMWText();
+  const full = computeYMW();
+  const scrollText =
+    `${full.years} years, ${full.months} months, ${full.weeks} weeks`;
 
   makeGif(
-    `penn_countdown_scroll_${todayStamp()}.gif`,
+    `penn_scroll_${todayStamp()}.gif`,
     gif => {
-      const temp = document.createElement("canvas");
-      temp.width = WIDTH;
-      temp.height = HEIGHT;
-      const t = temp.getContext("2d");
+      const c = document.createElement("canvas");
+      c.width = WIDTH;
+      c.height = HEIGHT;
+      const ctx = c.getContext("2d");
 
-      const fontTop = "9px Arial";
-      const fontBottom = "12px Arial";
+      // Measure width
+      ctx.font = "12px Arial";
+      const w = ctx.measureText(scrollText).width;
 
-      t.font = fontBottom;
-      const textWidth = t.measureText(text).width;
-      const start = WIDTH;
-      const end = -textWidth;
+      for (let x = WIDTH; x > -w; x -= 2) {
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0,0,WIDTH,HEIGHT);
 
-      for (let x = start; x > end; x -= 2) {
-        t.fillStyle = "#000";
-        t.fillRect(0, 0, WIDTH, HEIGHT);
+        // Top line
+        ctx.font = "9px Arial";
+        ctx.fillStyle = COLOR;
+        const tw = ctx.measureText(TOP_TEXT).width;
+        ctx.fillText(TOP_TEXT, (WIDTH - tw)/2, 9);
 
-        // Top text
-        t.font = fontTop;
-        t.fillStyle = COLOR;
-        const topW = t.measureText(TOP_TEXT).width;
-        t.fillText(TOP_TEXT, (WIDTH - topW) / 2, 11);
+        // Scrolling bottom text
+        ctx.font = "12px Arial";
+        ctx.fillText(scrollText, x, 26);
 
-        // Bottom scrolling text (full spelled-out string)
-        t.font = fontBottom;
-        t.fillText(text, x, 24);
-
-        gif.addFrame(t, { copy: true, delay: 80 });
+        gif.addFrame(ctx, {copy:true, delay:80});
       }
     },
-    name => {
-      document.getElementById("status").textContent =
-        `Done. Downloaded ${name}.`;
-    }
+    name => status.textContent = `Done. Downloaded ${name}.`
   );
 };
 
-// ---- Static GIF (spelled-out string, auto-shrunk font) ----
+
+// ---- STATIC THREE-LINE GIF ----
 document.getElementById("generateStaticBtn").onclick = () => {
   const status = document.getElementById("status");
-  status.textContent = "Generating static GIF…";
+  status.textContent = "Generating static 3-line GIF…";
+
+  const { line1, line2 } = computeThreeLineStatic();
 
   makeGif(
-    `penn_countdown_static_${todayStamp()}.gif`,
+    `penn_static_${todayStamp()}.gif`,
     gif => {
-      const temp = document.createElement("canvas");
-      temp.width = WIDTH;
-      temp.height = HEIGHT;
-      const t = temp.getContext("2d");
+      const c = document.createElement("canvas");
+      c.width = WIDTH;
+      c.height = HEIGHT;
+      const ctx = c.getContext("2d");
 
-      t.fillStyle = "#000";
-      t.fillRect(0, 0, WIDTH, HEIGHT);
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0,0,WIDTH,HEIGHT);
 
-      // Top text
-      const fontTop = "9px Arial";
-      t.font = fontTop;
-      t.fillStyle = COLOR;
-      const topW = t.measureText(TOP_TEXT).width;
-      t.fillText(TOP_TEXT, (WIDTH - topW) / 2, 11);
+      // Top line
+      ctx.font = "9px Arial";
+      ctx.fillStyle = COLOR;
+      const tw = ctx.measureText(TOP_TEXT).width;
+      ctx.fillText(TOP_TEXT, (WIDTH - tw)/2, 8);
 
-      // Bottom text – full spelled-out, largest font that fits
-      const { font, text } = chooseStaticFont(t, "Arial");
-      t.font = font;
-      const bw = t.measureText(text).width;
-      t.fillText(text, (WIDTH - bw) / 2, 24);
+      // Middle line — auto size
+      ctx.font = fitFont(ctx, line1, WIDTH - 2);
+      const midW = ctx.measureText(line1).width;
+      ctx.fillText(line1, (WIDTH - midW)/2, 18);
 
-      // One long frame (static)
-      gif.addFrame(t, { copy: true, delay: 1500 });
+      // Bottom line — auto size
+      ctx.font = fitFont(ctx, line2, WIDTH - 2);
+      const botW = ctx.measureText(line2).width;
+      ctx.fillText(line2, (WIDTH - botW)/2, 28);
+
+      gif.addFrame(ctx, {copy:true, delay:1500});
     },
-    name => {
-      document.getElementById("status").textContent =
-        `Done. Downloaded ${name}.`;
-    }
+    name => status.textContent = `Done. Downloaded ${name}.`
   );
 };
 </script>
