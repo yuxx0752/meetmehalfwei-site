@@ -62,6 +62,7 @@ const HEIGHT = 32;
 const COLOR = "#00ff00";
 const TOP_TEXT = "Shovel in the Ground...";
 const TARGET = new Date("2027-12-01T00:00:00-05:00");
+const LEFT_X = 1; // left margin in pixels
 
 // ===== DATE MATH =====
 function computeYMW() {
@@ -126,20 +127,17 @@ function drawPreview() {
   pctx.fillStyle = "#000";
   pctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-  // Top headline (10px preview)
+  // Top headline (10px), LEFT aligned
   pctx.font = "10px Arial";
   pctx.fillStyle = COLOR;
-  const topW = pctx.measureText(TOP_TEXT).width;
-  pctx.fillText(TOP_TEXT, (WIDTH - topW) / 2, 10);
+  pctx.fillText(TOP_TEXT, LEFT_X, 10);
 
-  // Line 2
+  // Line 2 (years, months), LEFT aligned
   pctx.font = "9px Arial";
-  const midW = pctx.measureText(line1).width;
-  pctx.fillText(line1, (WIDTH - midW) / 2, 20);
+  pctx.fillText(line1, LEFT_X, 20);
 
-  // Line 3
-  const botW = pctx.measureText(line2).width;
-  pctx.fillText(line2, (WIDTH - botW) / 2, 30);
+  // Line 3 (weeks), LEFT aligned
+  pctx.fillText(line2, LEFT_X, 30);
 }
 
 drawPreview();
@@ -169,7 +167,7 @@ function makeGif(name, frameCallback, done) {
   gif.render();
 }
 
-// ===== SCROLLING GIF (unchanged) =====
+// ===== SCROLLING GIF =====
 document.getElementById("generateScrollBtn").onclick = () => {
   const status = document.getElementById("status");
   status.textContent = "Generating scrolling GIF…";
@@ -193,11 +191,12 @@ document.getElementById("generateScrollBtn").onclick = () => {
         ctx.fillStyle = "#000";
         ctx.fillRect(0,0,WIDTH,HEIGHT);
 
+        // Top line LEFT aligned
         ctx.font = "10px Arial";
-        const tw = ctx.measureText(TOP_TEXT).width;
         ctx.fillStyle = COLOR;
-        ctx.fillText(TOP_TEXT, (WIDTH - tw) / 2, 10);
+        ctx.fillText(TOP_TEXT, LEFT_X, 10);
 
+        // Scrolling text along bottom
         ctx.font = "12px Arial";
         ctx.fillText(scrollText, x, 27);
 
@@ -208,7 +207,7 @@ document.getElementById("generateScrollBtn").onclick = () => {
   );
 };
 
-// ===== STATIC 3-LINE GIF (TOP LINE MAX 10px) =====
+// ===== STATIC 3-LINE GIF (LEFT ALIGNED) =====
 document.getElementById("generateStaticBtn").onclick = () => {
   const status = document.getElementById("status");
   status.textContent = "Generating static GIF…";
@@ -226,21 +225,18 @@ document.getElementById("generateStaticBtn").onclick = () => {
       ctx.fillStyle = "#000";
       ctx.fillRect(0,0,WIDTH,HEIGHT);
 
-      // ---- TOP LINE capped at 10px ----
+      // ---- TOP LINE (max 10px), LEFT aligned ----
       ctx.font = fitFont(ctx, TOP_TEXT, WIDTH - 2, [10, 9, 8]);
-      let topW = ctx.measureText(TOP_TEXT).width;
       ctx.fillStyle = COLOR;
-      ctx.fillText(TOP_TEXT, (WIDTH - topW) / 2, 9);
+      ctx.fillText(TOP_TEXT, LEFT_X, 9);
 
-      // ---- MIDDLE ----
+      // ---- MIDDLE LINE, LEFT aligned ----
       ctx.font = fitFont(ctx, line1, WIDTH - 2, [9, 8]);
-      let midW = ctx.measureText(line1).width;
-      ctx.fillText(line1, (WIDTH - midW) / 2, 20);
+      ctx.fillText(line1, LEFT_X, 20);
 
-      // ---- BOTTOM ----
+      // ---- BOTTOM LINE, LEFT aligned ----
       ctx.font = fitFont(ctx, line2, WIDTH - 2, [9, 8]);
-      let botW = ctx.measureText(line2).width;
-      ctx.fillText(line2, (WIDTH - botW) / 2, 30);
+      ctx.fillText(line2, LEFT_X, 30);
 
       gif.addFrame(ctx, { copy: true, delay: 1500 });
     },
