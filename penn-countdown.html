@@ -90,13 +90,17 @@ function computeYMW() {
   return { years, months, weeks };
 }
 
-// ===== TEXT SPLITTING FOR STATIC MODE =====
 function computeThreeLineStatic() {
   const { years, months, weeks } = computeYMW();
   return {
     line1: `${years} year${years === 1 ? "" : "s"}, ${months} month${months === 1 ? "" : "s"}`,
     line2: `${weeks} week${weeks === 1 ? "" : "s"}`
   };
+}
+
+function todayStamp() {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}-${String(n.getDate()).padStart(2,"0")}`;
 }
 
 // ===== FONT FITTING =====
@@ -110,7 +114,7 @@ function fitFont(ctx, text, maxWidth, sizes = [12, 11, 10, 9, 8]) {
   return `8px Arial`;
 }
 
-// ===== PREVIEW CANVAS =====
+// ===== PREVIEW =====
 const preview = document.getElementById("preview");
 const pctx = preview.getContext("2d");
 
@@ -122,30 +126,26 @@ function drawPreview() {
   pctx.fillStyle = "#000";
   pctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-  // Larger top-line font for preview
-  pctx.font = "11px Arial";
+  // Top headline (10px preview)
+  pctx.font = "10px Arial";
   pctx.fillStyle = COLOR;
-
   const topW = pctx.measureText(TOP_TEXT).width;
   pctx.fillText(TOP_TEXT, (WIDTH - topW) / 2, 10);
 
+  // Line 2
   pctx.font = "9px Arial";
   const midW = pctx.measureText(line1).width;
   pctx.fillText(line1, (WIDTH - midW) / 2, 20);
 
+  // Line 3
   const botW = pctx.measureText(line2).width;
   pctx.fillText(line2, (WIDTH - botW) / 2, 30);
 }
 
 drawPreview();
 
-// ===== GIF GENERATOR (shared) =====
-function todayStamp() {
-  const n = new Date();
-  return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}-${String(n.getDate()).padStart(2,"0")}`;
-}
-
-function makeGif(name, addFrames, finish) {
+// ===== GIF UTILITY =====
+function makeGif(name, frameCallback, done) {
   const gif = new GIF({
     workers: 2,
     quality: 10,
@@ -154,23 +154,22 @@ function makeGif(name, addFrames, finish) {
     workerScript: "gif.worker.js"
   });
 
-  addFrames(gif);
+  frameCallback(gif);
 
   gif.on("finished", blob => {
-    const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
+    const url = URL.createObjectURL(blob);
     a.href = url;
     a.download = name;
     a.click();
     URL.revokeObjectURL(url);
-
-    finish(name);
+    done(name);
   });
 
   gif.render();
 }
 
-// ===== SCROLLING GIF (UNCHANGED) =====
+// ===== SCROLLING GIF (unchanged) =====
 document.getElementById("generateScrollBtn").onclick = () => {
   const status = document.getElementById("status");
   status.textContent = "Generating scrolling GIF…";
@@ -194,9 +193,9 @@ document.getElementById("generateScrollBtn").onclick = () => {
         ctx.fillStyle = "#000";
         ctx.fillRect(0,0,WIDTH,HEIGHT);
 
-        ctx.font = "11px Arial";
-        ctx.fillStyle = COLOR;
+        ctx.font = "10px Arial";
         const tw = ctx.measureText(TOP_TEXT).width;
+        ctx.fillStyle = COLOR;
         ctx.fillText(TOP_TEXT, (WIDTH - tw) / 2, 10);
 
         ctx.font = "12px Arial";
@@ -209,10 +208,10 @@ document.getElementById("generateScrollBtn").onclick = () => {
   );
 };
 
-// ===== STATIC 3-LINE GIF WITH LARGER TOP TEXT =====
+// ===== STATIC 3-LINE GIF (TOP LINE MAX 10px) =====
 document.getElementById("generateStaticBtn").onclick = () => {
   const status = document.getElementById("status");
-  status.textContent = "Generating static 3-line GIF…";
+  status.textContent = "Generating static GIF…";
 
   const { line1, line2 } = computeThreeLineStatic();
 
@@ -227,19 +226,19 @@ document.getElementById("generateStaticBtn").onclick = () => {
       ctx.fillStyle = "#000";
       ctx.fillRect(0,0,WIDTH,HEIGHT);
 
-      // ---- Larger Header: auto-fit between 11–12px ----
-      ctx.font = fitFont(ctx, TOP_TEXT, WIDTH - 2, [12, 11, 10]);
+      // ---- TOP LINE capped at 10px ----
+      ctx.font = fitFont(ctx, TOP_TEXT, WIDTH - 2, [10, 9, 8]);
       let topW = ctx.measureText(TOP_TEXT).width;
       ctx.fillStyle = COLOR;
       ctx.fillText(TOP_TEXT, (WIDTH - topW) / 2, 9);
 
-      // ---- Middle Line ----
-      ctx.font = fitFont(ctx, line1, WIDTH - 2);
+      // ---- MIDDLE ----
+      ctx.font = fitFont(ctx, line1, WIDTH - 2, [9, 8]);
       let midW = ctx.measureText(line1).width;
       ctx.fillText(line1, (WIDTH - midW) / 2, 20);
 
-      // ---- Bottom Line ----
-      ctx.font = fitFont(ctx, line2, WIDTH - 2);
+      // ---- BOTTOM ----
+      ctx.font = fitFont(ctx, line2, WIDTH - 2, [9, 8]);
       let botW = ctx.measureText(line2).width;
       ctx.fillText(line2, (WIDTH - botW) / 2, 30);
 
@@ -249,5 +248,6 @@ document.getElementById("generateStaticBtn").onclick = () => {
   );
 };
 </script>
+
 </body>
 </html>
