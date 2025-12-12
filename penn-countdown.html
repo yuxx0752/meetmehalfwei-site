@@ -42,7 +42,7 @@
 <body>
 
 <h2>Penn T – Shovel in the Ground Countdown GIF</h2>
-<p>Target date: <strong>December 1, 2027</strong></p>
+<p>Target date: <strong>December 31, 2027</strong></p>
 
 <p id="label"></p>
 
@@ -51,6 +51,7 @@
 </div>
 
 <button id="generateScrollBtn">Generate Scrolling GIF</button>
+<button id="generateScrollDaysBtn">Generate Scrolling GIF (with days)</button>
 <button id="generateStaticBtn">Generate Static GIF</button>
 
 <div class="status" id="status">Ready.</div>
@@ -61,10 +62,12 @@ const WIDTH = 96;
 const HEIGHT = 32;
 const COLOR = "#00ff00";
 
-// NEW: remove ellipsis for static & preview
+// Static/preview header (no ellipsis)
 const TOP_TEXT = "Shovel in the Ground";
 
-const TARGET = new Date("2027-12-01T00:00:00-05:00");
+// UPDATED DEADLINE:
+const TARGET = new Date("2027-12-31T00:00:00-05:00");
+
 const LEFT_X = 1;
 
 // ===== DATE MATH =====
@@ -94,10 +97,38 @@ function computeYMW() {
   return { years, months, weeks };
 }
 
+// NEW: years/months/weeks/days (days remainder after weeks)
+function computeYMWD() {
+  const now = new Date();
+  if (now >= TARGET) return { years: 0, months: 0, weeks: 0, days: 0 };
+
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const end   = new Date(TARGET.getFullYear(), TARGET.getMonth(), TARGET.getDate());
+
+  let years  = end.getFullYear() - start.getFullYear();
+  let months = end.getMonth() - start.getMonth();
+  let days   = end.getDate() - start.getDate();
+
+  if (days < 0) {
+    months--;
+    const prev = new Date(end.getFullYear(), end.getMonth(), 0).getDate();
+    days += prev;
+  }
+
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+
+  const weeks = Math.floor(days / 7);
+  const remDays = days - weeks * 7;
+
+  return { years, months, weeks, days: remDays };
+}
+
 function computeThreeLineStatic() {
   const { years, months, weeks } = computeYMW();
   return {
-    // UPDATED: guarantee comma after months
     line1: `${years} year${years === 1 ? "" : "s"}, ${months} month${months === 1 ? "" : "s"},`,
     line2: `${weeks} week${weeks === 1 ? "" : "s"}`
   };
@@ -131,16 +162,12 @@ function drawPreview() {
   pctx.fillStyle = "#000";
   pctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-  // Top headline LEFT aligned
   pctx.font = "10px Arial";
   pctx.fillStyle = COLOR;
   pctx.fillText(TOP_TEXT, LEFT_X, 10);
 
-  // Line 1
   pctx.font = "9px Arial";
   pctx.fillText(line1, LEFT_X, 20);
-
-  // Line 2
   pctx.fillText(line2, LEFT_X, 30);
 }
 
@@ -171,7 +198,7 @@ function makeGif(name, frameCallback, done) {
   gif.render();
 }
 
-// ===== SCROLLING GIF (keeps ellipsis unless you say otherwise) =====
+// ===== SCROLLING GIF (Y/M/W) =====
 document.getElementById("generateScrollBtn").onclick = () => {
   const status = document.getElementById("status");
   status.textContent = "Generating scrolling GIF…";
@@ -188,7 +215,7 @@ document.getElementById("generateScrollBtn").onclick = () => {
       c.height = HEIGHT;
       const ctx = c.getContext("2d");
 
-      const SCROLL_HEADER = "Shovel in the Ground..."; // unchanged
+      const SCROLL_HEADER = "Shovel in the Ground...";
       ctx.font = "12px Arial";
       const w = ctx.measureText(scrollText).width;
 
@@ -196,7 +223,7 @@ document.getElementById("generateScrollBtn").onclick = () => {
         ctx.fillStyle = "#000";
         ctx.fillRect(0,0,WIDTH,HEIGHT);
 
-        // Header
+        // Header (left aligned)
         ctx.font = "10px Arial";
         ctx.fillStyle = COLOR;
         ctx.fillText(SCROLL_HEADER, LEFT_X, 10);
@@ -212,7 +239,48 @@ document.getElementById("generateScrollBtn").onclick = () => {
   );
 };
 
-// ===== STATIC 3-LINE GIF (LEFT ALIGNED + comma fix + no ellipsis) =====
+// ===== NEW: SCROLLING GIF (Y/M/W + DAYS) =====
+document.getElementById("generateScrollDaysBtn").onclick = () => {
+  const status = document.getElementById("status");
+  status.textContent = "Generating scrolling GIF (with days)…";
+
+  const full = computeYMWD();
+  const scrollText =
+    `${full.years} years, ${full.months} months, ${full.weeks} weeks, ${full.days} days`;
+
+  makeGif(
+    `penn_scroll_days_${todayStamp()}.gif`,
+    gif => {
+      const c = document.createElement("canvas");
+      c.width = WIDTH;
+      c.height = HEIGHT;
+      const ctx = c.getContext("2d");
+
+      const SCROLL_HEADER = "Shovel in the Ground...";
+      ctx.font = "12px Arial";
+      const w = ctx.measureText(scrollText).width;
+
+      for (let x = WIDTH; x > -w; x -= 2) {
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0,0,WIDTH,HEIGHT);
+
+        // Header (left aligned)
+        ctx.font = "10px Arial";
+        ctx.fillStyle = COLOR;
+        ctx.fillText(SCROLL_HEADER, LEFT_X, 10);
+
+        // Scrolling bottom line
+        ctx.font = "12px Arial";
+        ctx.fillText(scrollText, x, 27);
+
+        gif.addFrame(ctx, { copy: true, delay: 80 });
+      }
+    },
+    name => status.textContent = `Done. Downloaded ${name}.`
+  );
+};
+
+// ===== STATIC 3-LINE GIF =====
 document.getElementById("generateStaticBtn").onclick = () => {
   const status = document.getElementById("status");
   status.textContent = "Generating static GIF…";
@@ -230,16 +298,16 @@ document.getElementById("generateStaticBtn").onclick = () => {
       ctx.fillStyle = "#000";
       ctx.fillRect(0,0,WIDTH,HEIGHT);
 
-      // ---- TOP LINE — no ellipsis ----
+      // Top line (max 10px)
       ctx.font = fitFont(ctx, TOP_TEXT, WIDTH - 2, [10, 9, 8]);
       ctx.fillStyle = COLOR;
       ctx.fillText(TOP_TEXT, LEFT_X, 9);
 
-      // ---- MIDDLE LINE (with comma) ----
+      // Middle line
       ctx.font = fitFont(ctx, line1, WIDTH - 2, [9, 8]);
       ctx.fillText(line1, LEFT_X, 20);
 
-      // ---- BOTTOM LINE ----
+      // Bottom line
       ctx.font = fitFont(ctx, line2, WIDTH - 2, [9, 8]);
       ctx.fillText(line2, LEFT_X, 30);
 
