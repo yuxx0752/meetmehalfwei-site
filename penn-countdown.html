@@ -62,14 +62,11 @@
 const WIDTH = 96;
 const HEIGHT = 32;
 const COLOR = "#00ff00";
-
-// Static/preview header (no ellipsis)
 const TOP_TEXT = "Shovel in the Ground";
-
-// UPDATED DEADLINE:
 const TARGET = new Date("2027-12-31T00:00:00-05:00");
-
 const LEFT_X = 1;
+const STATIC_FRAMES = 60;
+const STATIC_DELAY = 100; // ms per frame (~6s total)
 
 // ===== DATE MATH =====
 function computeYMW() {
@@ -85,8 +82,7 @@ function computeYMW() {
 
   if (days < 0) {
     months--;
-    const prev = new Date(end.getFullYear(), end.getMonth(), 0).getDate();
-    days += prev;
+    days += new Date(end.getFullYear(), end.getMonth(), 0).getDate();
   }
 
   if (months < 0) {
@@ -94,99 +90,65 @@ function computeYMW() {
     months += 12;
   }
 
-  const weeks = Math.floor(days / 7);
-  return { years, months, weeks };
+  return { years, months, weeks: Math.floor(days / 7) };
 }
 
-// Years/months/weeks + remaining days after weeks
 function computeYMWD() {
+  const { years, months, weeks } = computeYMW();
   const now = new Date();
-  if (now >= TARGET) return { years: 0, months: 0, weeks: 0, days: 0 };
-
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const end   = new Date(TARGET.getFullYear(), TARGET.getMonth(), TARGET.getDate());
-
-  let years  = end.getFullYear() - start.getFullYear();
-  let months = end.getMonth() - start.getMonth();
-  let days   = end.getDate() - start.getDate();
-
-  if (days < 0) {
-    months--;
-    const prev = new Date(end.getFullYear(), end.getMonth(), 0).getDate();
-    days += prev;
-  }
-
-  if (months < 0) {
-    years--;
-    months += 12;
-  }
-
-  const weeks = Math.floor(days / 7);
-  const remDays = days - weeks * 7;
-
-  return { years, months, weeks, days: remDays };
+  const daysTotal = Math.floor((TARGET - now) / (1000 * 60 * 60 * 24));
+  return { years, months, weeks, days: daysTotal % 7 };
 }
 
-// Static (no days): 3 lines
-function computeThreeLineStatic() {
+function computeStatic() {
   const { years, months, weeks } = computeYMW();
   return {
-    line1: `${years} year${years === 1 ? "" : "s"}, ${months} month${months === 1 ? "" : "s"},`,
-    line2: `${weeks} week${weeks === 1 ? "" : "s"}`
+    line1: `${years} year${years===1?"":"s"}, ${months} month${months===1?"":"s"},`,
+    line2: `${weeks} week${weeks===1?"":"s"}`
   };
 }
 
-// Static (with days): 3 lines but combine weeks+days on bottom
-function computeThreeLineStaticWithDays() {
+function computeStaticDays() {
   const { years, months, weeks, days } = computeYMWD();
   return {
-    line1: `${years} year${years === 1 ? "" : "s"}, ${months} month${months === 1 ? "" : "s"},`,
-    line2: `${weeks} week${weeks === 1 ? "" : "s"}, ${days} day${days === 1 ? "" : "s"}`
+    line1: `${years} year${years===1?"":"s"}, ${months} month${months===1?"":"s"},`,
+    line2: `${weeks} week${weeks===1?"":"s"}, ${days} day${days===1?"":"s"}`
   };
 }
 
 function todayStamp() {
-  const n = new Date();
-  return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}-${String(n.getDate()).padStart(2,"0")}`;
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
 
-// ===== FONT FITTING =====
-function fitFont(ctx, text, maxWidth, sizes = [12, 11, 10, 9, 8]) {
+function fitFont(ctx, text, maxWidth, sizes=[10,9,8]) {
   for (const s of sizes) {
     ctx.font = `${s}px Arial`;
-    if (ctx.measureText(text).width <= maxWidth) {
-      return `${s}px Arial`;
-    }
+    if (ctx.measureText(text).width <= maxWidth) return `${s}px Arial`;
   }
-  return `8px Arial`;
+  return "8px Arial";
 }
 
 // ===== PREVIEW =====
-const preview = document.getElementById("preview");
-const pctx = preview.getContext("2d");
-
-function drawPreview() {
-  // default preview: static without days
-  const { line1, line2 } = computeThreeLineStatic();
+const pctx = document.getElementById("preview").getContext("2d");
+(function drawPreview(){
+  const { line1, line2 } = computeStatic();
   document.getElementById("label").innerText =
     `Label for today: "${line1} | ${line2}"`;
 
-  pctx.fillStyle = "#000";
-  pctx.fillRect(0, 0, WIDTH, HEIGHT);
+  pctx.fillStyle="#000";
+  pctx.fillRect(0,0,WIDTH,HEIGHT);
+  pctx.fillStyle=COLOR;
 
-  pctx.font = "10px Arial";
-  pctx.fillStyle = COLOR;
+  pctx.font="10px Arial";
   pctx.fillText(TOP_TEXT, LEFT_X, 10);
-
-  pctx.font = "9px Arial";
+  pctx.font="9px Arial";
   pctx.fillText(line1, LEFT_X, 20);
   pctx.fillText(line2, LEFT_X, 30);
-}
+})();
 
-drawPreview();
-
-// ===== GIF UTILITY =====
-function makeGif(name, frameCallback, done) {
+// ===== GIF HELPER =====
+function makeGif(name, drawFn) {
   const gif = new GIF({
     workers: 2,
     quality: 10,
@@ -195,166 +157,77 @@ function makeGif(name, frameCallback, done) {
     workerScript: "gif.worker.js"
   });
 
-  frameCallback(gif);
+  drawFn(gif);
 
   gif.on("finished", blob => {
     const a = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    a.href = url;
+    a.href = URL.createObjectURL(blob);
     a.download = name;
     a.click();
-    URL.revokeObjectURL(url);
-    done(name);
+    URL.revokeObjectURL(a.href);
+    document.getElementById("status").textContent =
+      `Done. Downloaded ${name}.`;
   });
 
   gif.render();
 }
 
-// ===== SCROLLING GIF (Y/M/W) =====
-document.getElementById("generateScrollBtn").onclick = () => {
-  const status = document.getElementById("status");
-  status.textContent = "Generating scrolling GIF…";
-
-  const full = computeYMW();
-  const scrollText =
-    `${full.years} years, ${full.months} months, ${full.weeks} weeks`;
-
-  makeGif(
-    `penn_scroll_${todayStamp()}.gif`,
-    gif => {
-      const c = document.createElement("canvas");
-      c.width = WIDTH;
-      c.height = HEIGHT;
-      const ctx = c.getContext("2d");
-
-      const SCROLL_HEADER = "Shovel in the Ground...";
-      ctx.font = "12px Arial";
-      const w = ctx.measureText(scrollText).width;
-
-      for (let x = WIDTH; x > -w; x -= 2) {
-        ctx.fillStyle = "#000";
-        ctx.fillRect(0,0,WIDTH,HEIGHT);
-
-        ctx.font = "10px Arial";
-        ctx.fillStyle = COLOR;
-        ctx.fillText(SCROLL_HEADER, LEFT_X, 10);
-
-        ctx.font = "12px Arial";
-        ctx.fillText(scrollText, x, 27);
-
-        gif.addFrame(ctx, { copy: true, delay: 80 });
-      }
-    },
-    name => status.textContent = `Done. Downloaded ${name}.`
-  );
-};
-
-// ===== SCROLLING GIF (Y/M/W + DAYS) =====
-document.getElementById("generateScrollDaysBtn").onclick = () => {
-  const status = document.getElementById("status");
-  status.textContent = "Generating scrolling GIF (with days)…";
-
-  const full = computeYMWD();
-  const scrollText =
-    `${full.years} years, ${full.months} months, ${full.weeks} weeks, ${full.days} days`;
-
-  makeGif(
-    `penn_scroll_days_${todayStamp()}.gif`,
-    gif => {
-      const c = document.createElement("canvas");
-      c.width = WIDTH;
-      c.height = HEIGHT;
-      const ctx = c.getContext("2d");
-
-      const SCROLL_HEADER = "Shovel in the Ground...";
-      ctx.font = "12px Arial";
-      const w = ctx.measureText(scrollText).width;
-
-      for (let x = WIDTH; x > -w; x -= 2) {
-        ctx.fillStyle = "#000";
-        ctx.fillRect(0,0,WIDTH,HEIGHT);
-
-        ctx.font = "10px Arial";
-        ctx.fillStyle = COLOR;
-        ctx.fillText(SCROLL_HEADER, LEFT_X, 10);
-
-        ctx.font = "12px Arial";
-        ctx.fillText(scrollText, x, 27);
-
-        gif.addFrame(ctx, { copy: true, delay: 80 });
-      }
-    },
-    name => status.textContent = `Done. Downloaded ${name}.`
-  );
-};
-
-// ===== STATIC 3-LINE GIF (no days) =====
+// ===== STATIC (NO DAYS) — 60 FRAMES =====
 document.getElementById("generateStaticBtn").onclick = () => {
-  const status = document.getElementById("status");
-  status.textContent = "Generating static GIF…";
+  document.getElementById("status").textContent = "Generating static GIF…";
+  const { line1, line2 } = computeStatic();
 
-  const { line1, line2 } = computeThreeLineStatic();
+  makeGif(`penn_static_${todayStamp()}.gif`, gif => {
+    const c=document.createElement("canvas");
+    c.width=WIDTH; c.height=HEIGHT;
+    const ctx=c.getContext("2d");
 
-  makeGif(
-    `penn_static_${todayStamp()}.gif`,
-    gif => {
-      const c = document.createElement("canvas");
-      c.width = WIDTH;
-      c.height = HEIGHT;
-      const ctx = c.getContext("2d");
-
-      ctx.fillStyle = "#000";
+    for(let i=0;i<STATIC_FRAMES;i++){
+      ctx.fillStyle="#000";
       ctx.fillRect(0,0,WIDTH,HEIGHT);
+      ctx.fillStyle=COLOR;
 
-      ctx.font = fitFont(ctx, TOP_TEXT, WIDTH - 2, [10, 9, 8]);
-      ctx.fillStyle = COLOR;
-      ctx.fillText(TOP_TEXT, LEFT_X, 9);
+      ctx.font=fitFont(ctx,TOP_TEXT,WIDTH-2);
+      ctx.fillText(TOP_TEXT,LEFT_X,9);
 
-      ctx.font = fitFont(ctx, line1, WIDTH - 2, [9, 8]);
-      ctx.fillText(line1, LEFT_X, 20);
+      ctx.font=fitFont(ctx,line1,WIDTH-2,[9,8]);
+      ctx.fillText(line1,LEFT_X,20);
 
-      ctx.font = fitFont(ctx, line2, WIDTH - 2, [9, 8]);
-      ctx.fillText(line2, LEFT_X, 30);
+      ctx.font=fitFont(ctx,line2,WIDTH-2,[9,8]);
+      ctx.fillText(line2,LEFT_X,30);
 
-      gif.addFrame(ctx, { copy: true, delay: 1500 });
-    },
-    name => status.textContent = `Done. Downloaded ${name}.`
-  );
+      gif.addFrame(ctx,{copy:true,delay:STATIC_DELAY});
+    }
+  });
 };
 
-// ===== NEW: STATIC 3-LINE GIF (with days) =====
+// ===== STATIC (WITH DAYS) — 60 FRAMES =====
 document.getElementById("generateStaticDaysBtn").onclick = () => {
-  const status = document.getElementById("status");
-  status.textContent = "Generating static GIF (with days)…";
+  document.getElementById("status").textContent = "Generating static GIF (with days)…";
+  const { line1, line2 } = computeStaticDays();
 
-  const { line1, line2 } = computeThreeLineStaticWithDays();
+  makeGif(`penn_static_days_${todayStamp()}.gif`, gif => {
+    const c=document.createElement("canvas");
+    c.width=WIDTH; c.height=HEIGHT;
+    const ctx=c.getContext("2d");
 
-  makeGif(
-    `penn_static_days_${todayStamp()}.gif`,
-    gif => {
-      const c = document.createElement("canvas");
-      c.width = WIDTH;
-      c.height = HEIGHT;
-      const ctx = c.getContext("2d");
-
-      ctx.fillStyle = "#000";
+    for(let i=0;i<STATIC_FRAMES;i++){
+      ctx.fillStyle="#000";
       ctx.fillRect(0,0,WIDTH,HEIGHT);
+      ctx.fillStyle=COLOR;
 
-      ctx.font = fitFont(ctx, TOP_TEXT, WIDTH - 2, [10, 9, 8]);
-      ctx.fillStyle = COLOR;
-      ctx.fillText(TOP_TEXT, LEFT_X, 9);
+      ctx.font=fitFont(ctx,TOP_TEXT,WIDTH-2);
+      ctx.fillText(TOP_TEXT,LEFT_X,9);
 
-      ctx.font = fitFont(ctx, line1, WIDTH - 2, [9, 8]);
-      ctx.fillText(line1, LEFT_X, 20);
+      ctx.font=fitFont(ctx,line1,WIDTH-2,[9,8]);
+      ctx.fillText(line1,LEFT_X,20);
 
-      // bottom line contains "X weeks, Y days"
-      ctx.font = fitFont(ctx, line2, WIDTH - 2, [9, 8]);
-      ctx.fillText(line2, LEFT_X, 30);
+      ctx.font=fitFont(ctx,line2,WIDTH-2,[9,8]);
+      ctx.fillText(line2,LEFT_X,30);
 
-      gif.addFrame(ctx, { copy: true, delay: 1500 });
-    },
-    name => status.textContent = `Done. Downloaded ${name}.`
-  );
+      gif.addFrame(ctx,{copy:true,delay:STATIC_DELAY});
+    }
+  });
 };
 </script>
 
