@@ -53,6 +53,7 @@
 <button id="generateScrollBtn">Generate Scrolling GIF</button>
 <button id="generateScrollDaysBtn">Generate Scrolling GIF (with days)</button>
 <button id="generateStaticBtn">Generate Static GIF</button>
+<button id="generateStaticDaysBtn">Generate Static GIF (with days)</button>
 
 <div class="status" id="status">Ready.</div>
 
@@ -97,7 +98,7 @@ function computeYMW() {
   return { years, months, weeks };
 }
 
-// NEW: years/months/weeks/days (days remainder after weeks)
+// Years/months/weeks + remaining days after weeks
 function computeYMWD() {
   const now = new Date();
   if (now >= TARGET) return { years: 0, months: 0, weeks: 0, days: 0 };
@@ -126,11 +127,21 @@ function computeYMWD() {
   return { years, months, weeks, days: remDays };
 }
 
+// Static (no days): 3 lines
 function computeThreeLineStatic() {
   const { years, months, weeks } = computeYMW();
   return {
     line1: `${years} year${years === 1 ? "" : "s"}, ${months} month${months === 1 ? "" : "s"},`,
     line2: `${weeks} week${weeks === 1 ? "" : "s"}`
+  };
+}
+
+// Static (with days): 3 lines but combine weeks+days on bottom
+function computeThreeLineStaticWithDays() {
+  const { years, months, weeks, days } = computeYMWD();
+  return {
+    line1: `${years} year${years === 1 ? "" : "s"}, ${months} month${months === 1 ? "" : "s"},`,
+    line2: `${weeks} week${weeks === 1 ? "" : "s"}, ${days} day${days === 1 ? "" : "s"}`
   };
 }
 
@@ -155,6 +166,7 @@ const preview = document.getElementById("preview");
 const pctx = preview.getContext("2d");
 
 function drawPreview() {
+  // default preview: static without days
   const { line1, line2 } = computeThreeLineStatic();
   document.getElementById("label").innerText =
     `Label for today: "${line1} | ${line2}"`;
@@ -223,12 +235,10 @@ document.getElementById("generateScrollBtn").onclick = () => {
         ctx.fillStyle = "#000";
         ctx.fillRect(0,0,WIDTH,HEIGHT);
 
-        // Header (left aligned)
         ctx.font = "10px Arial";
         ctx.fillStyle = COLOR;
         ctx.fillText(SCROLL_HEADER, LEFT_X, 10);
 
-        // Scrolling bottom line
         ctx.font = "12px Arial";
         ctx.fillText(scrollText, x, 27);
 
@@ -239,7 +249,7 @@ document.getElementById("generateScrollBtn").onclick = () => {
   );
 };
 
-// ===== NEW: SCROLLING GIF (Y/M/W + DAYS) =====
+// ===== SCROLLING GIF (Y/M/W + DAYS) =====
 document.getElementById("generateScrollDaysBtn").onclick = () => {
   const status = document.getElementById("status");
   status.textContent = "Generating scrolling GIF (with days)…";
@@ -264,12 +274,10 @@ document.getElementById("generateScrollDaysBtn").onclick = () => {
         ctx.fillStyle = "#000";
         ctx.fillRect(0,0,WIDTH,HEIGHT);
 
-        // Header (left aligned)
         ctx.font = "10px Arial";
         ctx.fillStyle = COLOR;
         ctx.fillText(SCROLL_HEADER, LEFT_X, 10);
 
-        // Scrolling bottom line
         ctx.font = "12px Arial";
         ctx.fillText(scrollText, x, 27);
 
@@ -280,7 +288,7 @@ document.getElementById("generateScrollDaysBtn").onclick = () => {
   );
 };
 
-// ===== STATIC 3-LINE GIF =====
+// ===== STATIC 3-LINE GIF (no days) =====
 document.getElementById("generateStaticBtn").onclick = () => {
   const status = document.getElementById("status");
   status.textContent = "Generating static GIF…";
@@ -298,16 +306,48 @@ document.getElementById("generateStaticBtn").onclick = () => {
       ctx.fillStyle = "#000";
       ctx.fillRect(0,0,WIDTH,HEIGHT);
 
-      // Top line (max 10px)
       ctx.font = fitFont(ctx, TOP_TEXT, WIDTH - 2, [10, 9, 8]);
       ctx.fillStyle = COLOR;
       ctx.fillText(TOP_TEXT, LEFT_X, 9);
 
-      // Middle line
       ctx.font = fitFont(ctx, line1, WIDTH - 2, [9, 8]);
       ctx.fillText(line1, LEFT_X, 20);
 
-      // Bottom line
+      ctx.font = fitFont(ctx, line2, WIDTH - 2, [9, 8]);
+      ctx.fillText(line2, LEFT_X, 30);
+
+      gif.addFrame(ctx, { copy: true, delay: 1500 });
+    },
+    name => status.textContent = `Done. Downloaded ${name}.`
+  );
+};
+
+// ===== NEW: STATIC 3-LINE GIF (with days) =====
+document.getElementById("generateStaticDaysBtn").onclick = () => {
+  const status = document.getElementById("status");
+  status.textContent = "Generating static GIF (with days)…";
+
+  const { line1, line2 } = computeThreeLineStaticWithDays();
+
+  makeGif(
+    `penn_static_days_${todayStamp()}.gif`,
+    gif => {
+      const c = document.createElement("canvas");
+      c.width = WIDTH;
+      c.height = HEIGHT;
+      const ctx = c.getContext("2d");
+
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0,0,WIDTH,HEIGHT);
+
+      ctx.font = fitFont(ctx, TOP_TEXT, WIDTH - 2, [10, 9, 8]);
+      ctx.fillStyle = COLOR;
+      ctx.fillText(TOP_TEXT, LEFT_X, 9);
+
+      ctx.font = fitFont(ctx, line1, WIDTH - 2, [9, 8]);
+      ctx.fillText(line1, LEFT_X, 20);
+
+      // bottom line contains "X weeks, Y days"
       ctx.font = fitFont(ctx, line2, WIDTH - 2, [9, 8]);
       ctx.fillText(line2, LEFT_X, 30);
 
