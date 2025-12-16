@@ -2,213 +2,289 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Penn T – Shovel in the Ground Countdown</title>
-
+<title>Penn T Countdown – JPG + Video Export</title>
 <style>
-  body {
-    background: #111;
-    color: #eee;
-    font-family: system-ui, sans-serif;
-    padding: 20px;
-  }
-  button {
-    margin: 6px 6px 6px 0;
-    padding: 8px 14px;
-    font-size: 14px;
-    cursor: pointer;
-  }
-  #preview {
-    margin: 12px 0;
-    border: 1px solid #444;
-    padding: 6px;
-    display: inline-block;
-    background: #000;
-  }
-  canvas {
-    image-rendering: pixelated;
-  }
+  body { background:#111; color:#eee; font-family:system-ui,sans-serif; padding:16px; }
+  #wrap { display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap; }
+  #panel { border:1px solid #444; padding:10px; background:#000; display:inline-block; }
+  #canvas { width: 768px; height: 256px; image-rendering: pixelated; border:1px solid #555; }
+  button { padding:8px 14px; margin:6px 6px 6px 0; cursor:pointer; }
+  .muted { color:#bbb; font-size: 13px; max-width: 780px; }
+  code { background:#222; padding:2px 6px; border-radius:4px; }
 </style>
 </head>
-
 <body>
 
-<h1>Penn T – Shovel in the Ground Countdown GIF</h1>
-<p><b>Target date:</b> December 31, 2027</p>
-<p id="label"></p>
+<h2>Penn T – Shovel in the Ground Countdown</h2>
+<p><b>Target date:</b> December 31, 2027 (America/New_York calendar)</p>
 
-<div id="preview">
-  <canvas id="canvas" width="96" height="32"></canvas>
+<div id="wrap">
+  <div>
+    <div id="panel">
+      <canvas id="canvas" width="96" height="32"></canvas>
+    </div>
+
+    <div style="margin-top:10px;">
+      <button id="btnStaticJpg">Download STATIC JPG</button>
+      <button id="btnStaticJpgDays">Download STATIC JPG (with days)</button>
+      <br/>
+      <button id="btnScrollWebm">Download SCROLLING Video (WebM)</button>
+      <button id="btnScrollWebmDays">Download SCROLLING Video (WebM, with days)</button>
+    </div>
+
+    <p id="status" class="muted">Ready.</p>
+
+    <p class="muted">
+      If your LED app only accepts MP4, convert the downloaded WebM using ffmpeg (command below).
+      If your app accepts WebM directly, you’re done.
+    </p>
+  </div>
 </div>
 
-<br/>
-
-<button onclick="makeScrolling(false)">Generate Scrolling GIF</button>
-<button onclick="makeScrolling(true)">Generate Scrolling GIF (with days)</button><br/>
-<button onclick="makeStatic(false)">Generate Static GIF</button>
-<button onclick="makeStatic(true)">Generate Static GIF (with days)</button>
-
-<p id="status">Ready.</p>
-
-<script src="gif.js"></script>
-
 <script>
-/* ===============================
-   CONSTANTS
-================================ */
-const WIDTH = 96;
-const HEIGHT = 32;
+/* =========================
+   SETTINGS
+========================= */
+const W = 96, H = 32;
 const COLOR = "#00ff00";
 const BG = "#000000";
+const TARGET_NY = { y: 2027, m: 12, d: 31 }; // Dec 31, 2027
 
-/* ===============================
-   TIMEZONE-SAFE DATE MATH
-================================ */
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+// Layout (tuned for 96x32)
+const X = 1;
+const Y_TOP = 1;
+const Y_MID = 12;
+const Y_BOT = 22;
+
+function status(msg){ document.getElementById("status").textContent = msg; }
+
+/* =========================
+   TIMEZONE-SAFE NY DATE
+   (fixes off-by-one)
+========================= */
 function getNYParts(d = new Date()) {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
+    year: "numeric", month: "2-digit", day: "2-digit"
   }).formatToParts(d);
-
   const o = {};
   for (const p of parts) o[p.type] = p.value;
-  return { y: +o.year, m: +o.month, d: +o.day };
-}
-
-function nyToUTC(y, m, d) {
-  return Date.UTC(y, m - 1, d);
+  return { y:+o.year, m:+o.month, d:+o.day };
 }
 
 function computeYMWD() {
   const now = getNYParts();
-  const target = { y: 2027, m: 12, d: 31 };
 
-  let years = target.y - now.y;
-  let months = target.m - now.m;
-  let days = target.d - now.d;
+  let years  = TARGET_NY.y - now.y;
+  let months = TARGET_NY.m - now.m;
+  let days   = TARGET_NY.d - now.d;
 
+  // Borrow days from previous month of target
   if (days < 0) {
     months--;
-    days += new Date(Date.UTC(target.y, target.m - 1, 0)).getUTCDate();
+    const prevMonthDays = new Date(Date.UTC(TARGET_NY.y, TARGET_NY.m - 1, 0)).getUTCDate();
+    days += prevMonthDays;
   }
   if (months < 0) {
     years--;
     months += 12;
   }
 
+  // Convert remaining days to weeks + days
   const weeks = Math.floor(days / 7);
-  days -= weeks * 7;
+  days = days - weeks * 7;
 
+  // Clamp if past target
+  if (years < 0 || (years === 0 && months === 0 && weeks === 0 && days === 0)) {
+    return { years:0, months:0, weeks:0, days:0 };
+  }
   return { years, months, weeks, days };
 }
 
-function updateLabel() {
-  const { years, months, weeks, days } = computeYMWD();
-  document.getElementById("label").innerText =
-    `Label for today: "${years} year, ${months} months | ${weeks} weeks${days ? ", " + days + " days" : ""}"`;
+function stamp() {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}-${String(n.getDate()).padStart(2,"0")}`;
 }
-updateLabel();
 
-/* ===============================
+/* =========================
    DRAW HELPERS
-================================ */
-function clear(ctx) {
+========================= */
+function clear() {
   ctx.fillStyle = BG;
-  ctx.fillRect(0, 0, WIDTH, HEIGHT);
-}
-
-function drawText(ctx, text, x, y, size) {
+  ctx.fillRect(0,0,W,H);
   ctx.fillStyle = COLOR;
-  ctx.font = `${size}px Arial`;
   ctx.textBaseline = "top";
+}
+
+function fitFont(text, maxWidth, sizes) {
+  for (const s of sizes) {
+    ctx.font = `${s}px Arial`;
+    if (ctx.measureText(text).width <= maxWidth) return s;
+  }
+  return sizes[sizes.length-1];
+}
+
+// “micro-bold” = +1px width and +1px height without blowing up
+function microBold(text, x, y) {
   ctx.fillText(text, x, y);
+  ctx.fillText(text, x+1, y);   // +1 wider
+  ctx.fillText(text, x, y+1);   // +1 taller
 }
 
-/* ===============================
-   STATIC GIF
-================================ */
-function makeStatic(withDays) {
+function drawStatic(withDays) {
   const { years, months, weeks, days } = computeYMWD();
-  const canvas = document.getElementById("canvas");
-  const ctx = canvas.getContext("2d");
 
-  clear(ctx);
+  const top = "Shovel in the Ground"; // no ellipsis
+  const line2 = `${years} year, ${months} months,`; // comma after months
+  const line3 = withDays ? `${weeks} weeks, ${days} days` : `${weeks} weeks`;
 
-  drawText(ctx, "Shovel in the Ground", 2, 1, 10);
-  drawText(ctx, `${years} year, ${months} months,`, 2, 13, 9);
+  clear();
 
-  const third = withDays
-    ? `${weeks} weeks, ${days} days`
-    : `${weeks} weeks`;
+  // Top line slightly larger
+  const topSize = fitFont(top, W-2, [10,9,8]);
+  ctx.font = `${topSize}px Arial`;
+  ctx.fillText(top, X, Y_TOP);
 
-  drawText(ctx, third, 2, 23, 9);
+  // Bottom two lines: same size, micro-bold for readability
+  const s2 = fitFont(line2, W-2, [9,8]);
+  ctx.font = `${s2}px Arial`;
+  microBold(line2, X, Y_MID);
 
-  saveGIF([canvas], "static", withDays);
+  const s3 = fitFont(line3, W-2, [9,8]);
+  ctx.font = `${s3}px Arial`;
+  microBold(line3, X, Y_BOT);
 }
 
-/* ===============================
-   SCROLLING GIF
-================================ */
-function makeScrolling(withDays) {
+function drawScrollingFrame(withDays, scrollX) {
   const { years, months, weeks, days } = computeYMWD();
+
+  const top = "Shovel in the Ground";
   const bottom = withDays
     ? `${years} year, ${months} months, ${weeks} weeks, ${days} days`
     : `${years} year, ${months} months, ${weeks} weeks`;
 
-  const frames = [];
-  const tmp = document.createElement("canvas");
-  tmp.width = WIDTH;
-  tmp.height = HEIGHT;
-  const tctx = tmp.getContext("2d");
+  clear();
 
-  const textWidth = bottom.length * 6;
-  for (let x = WIDTH; x > -textWidth; x -= 2) {
-    clear(tctx);
-    drawText(tctx, "Shovel in the Ground", 2, 1, 10);
-    drawText(tctx, bottom, x, 16, 9);
+  // Header
+  const topSize = fitFont(top, W-2, [10,9,8]);
+  ctx.font = `${topSize}px Arial`;
+  ctx.fillText(top, X, Y_TOP);
 
-    const frame = document.createElement("canvas");
-    frame.width = WIDTH;
-    frame.height = HEIGHT;
-    frame.getContext("2d").drawImage(tmp, 0, 0);
-    frames.push(frame);
+  // Scrolling line
+  const botSize = fitFont(bottom, 9999, [9]); // keep consistent
+  ctx.font = `${botSize}px Arial`;
+  ctx.fillText(bottom, scrollX, 16);
+}
+
+/* =========================
+   DOWNLOAD: JPG
+========================= */
+async function downloadJpg(withDays) {
+  drawStatic(withDays);
+
+  // Note: JPG on tiny pixel art can blur a bit; if you want sharper, switch to PNG.
+  const blob = await new Promise(res => canvas.toBlob(res, "image/jpeg", 0.95));
+  const name = `penn_static_${withDays ? "with_days_" : ""}${stamp()}.jpg`;
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+
+  status(`Saved ${name}`);
+}
+
+/* =========================
+   DOWNLOAD: VIDEO (WebM)
+   (Record canvas frames)
+========================= */
+async function downloadWebm(withDays) {
+  status("Recording video…");
+
+  // Build scroll text width estimate (safe + simple)
+  const { years, months, weeks, days } = computeYMWD();
+  const bottom = withDays
+    ? `${years} year, ${months} months, ${weeks} weeks, ${days} days`
+    : `${years} year, ${months} months, ${weeks} weeks`;
+  ctx.font = "9px Arial";
+  const textW = Math.ceil(ctx.measureText(bottom).width);
+
+  const fps = 10;
+  const step = 2;           // scroll speed per frame
+  const startX = W;
+  const endX = -textW;
+
+  // Duration frames
+  const frames = Math.max(1, Math.ceil((startX - endX) / step));
+  const durationMs = Math.ceil((frames / fps) * 1000);
+
+  // Record the canvas stream
+  const stream = canvas.captureStream(fps);
+  let mime = "video/webm;codecs=vp9";
+  if (!MediaRecorder.isTypeSupported(mime)) mime = "video/webm;codecs=vp8";
+  if (!MediaRecorder.isTypeSupported(mime)) mime = "video/webm";
+
+  const rec = new MediaRecorder(stream, { mimeType: mime });
+  const chunks = [];
+  rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+
+  // Animate while recording
+  let x = startX;
+  let frameCount = 0;
+
+  function tick() {
+    drawScrollingFrame(withDays, x);
+    x -= step;
+    frameCount++;
+    if (frameCount >= frames) return;
+    setTimeout(tick, Math.round(1000 / fps));
   }
 
-  saveGIF(frames, "scrolling", withDays);
+  rec.start();
+  tick();
+
+  await new Promise(res => setTimeout(res, durationMs + 150));
+  rec.stop();
+
+  await new Promise(res => rec.onstop = res);
+
+  const blob = new Blob(chunks, { type: mime });
+  const name = `penn_scrolling_${withDays ? "with_days_" : ""}${stamp()}.webm`;
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+
+  status(`Saved ${name}`);
 }
 
-/* ===============================
-   GIF EXPORT
-================================ */
-function saveGIF(frames, mode, withDays) {
-  const gif = new GIF({
-    workers: 2,
-    quality: 10,
-    width: WIDTH,
-    height: HEIGHT,
-    workerScript: "gif.worker.js"
-  });
+/* =========================
+   Wire up buttons
+========================= */
+document.getElementById("btnStaticJpg").addEventListener("click", () => downloadJpg(false));
+document.getElementById("btnStaticJpgDays").addEventListener("click", () => downloadJpg(true));
+document.getElementById("btnScrollWebm").addEventListener("click", () => downloadWebm(false));
+document.getElementById("btnScrollWebmDays").addEventListener("click", () => downloadWebm(true));
 
-  frames.forEach(c => gif.addFrame(c, { delay: 120 }));
-
-  gif.on("finished", blob => {
-    const today = new Date().toISOString().slice(0,10);
-    const tag = withDays ? "with_days" : "no_days";
-    const name = `penn_${mode}_${tag}_${today}.gif`;
-
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = name;
-    a.click();
-
-    document.getElementById("status").innerText =
-      `Done. Saved ${name}`;
-  });
-
-  gif.render();
-}
+// Initial preview
+drawStatic(false);
 </script>
 
+<!--
+MP4 conversion (if needed):
+ffmpeg -i penn_scrolling_with_days_YYYY-MM-DD.webm -vf "scale=iw:ih:flags=neighbor" -c:v libx264 -pix_fmt yuv420p -movflags +faststart penn_scrolling_with_days_YYYY-MM-DD.mp4
+-->
 </body>
 </html>
