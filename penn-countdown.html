@@ -1,154 +1,187 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Penn T Countdown GIF</title>
-  <style>
-    body {
-      font-family: system-ui, sans-serif;
-      background: #111;
-      color: #eee;
-      padding: 16px;
-    }
-    #previewWrapper {
-      border: 1px solid #444;
-      display: inline-block;
-      padding: 8px;
-      background: #000;
-      margin-top: 12px;
-    }
-    #preview {
-      image-rendering: pixelated;
-      image-rendering: crisp-edges;
-      width: 384px;
-      height: 128px;
-      border: 1px solid #555;
-    }
-    button {
-      padding: 8px 14px;
-      margin-top: 10px;
-      margin-right: 8px;
-      cursor: pointer;
-    }
-    .status {
-      margin-top: 10px;
-      font-size: 0.9rem;
-      color: #ccc;
-    }
-  </style>
+<meta charset="UTF-8" />
+<title>Penn T – Shovel in the Ground Countdown</title>
 
-  <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js"></script>
+<style>
+  body {
+    background: #111;
+    color: #eee;
+    font-family: system-ui, sans-serif;
+    padding: 20px;
+  }
+  button {
+    margin: 6px 6px 6px 0;
+    padding: 8px 14px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  #preview {
+    margin: 12px 0;
+    border: 1px solid #444;
+    padding: 6px;
+    display: inline-block;
+    background: #000;
+  }
+  canvas {
+    image-rendering: pixelated;
+  }
+</style>
 </head>
+
 <body>
 
-<h2>Penn T – Shovel in the Ground Countdown GIF</h2>
-<p>Target date: <strong>December 31, 2027</strong></p>
-
+<h1>Penn T – Shovel in the Ground Countdown GIF</h1>
+<p><b>Target date:</b> December 31, 2027</p>
 <p id="label"></p>
 
-<div id="previewWrapper">
-  <canvas id="preview" width="96" height="32"></canvas>
+<div id="preview">
+  <canvas id="canvas" width="96" height="32"></canvas>
 </div>
 
-<button id="generateScrollBtn">Generate Scrolling GIF</button>
-<button id="generateScrollDaysBtn">Generate Scrolling GIF (with days)</button>
-<button id="generateStaticBtn">Generate Static GIF</button>
-<button id="generateStaticDaysBtn">Generate Static GIF (with days)</button>
+<br/>
 
-<div class="status" id="status">Ready.</div>
+<button onclick="makeScrolling(false)">Generate Scrolling GIF</button>
+<button onclick="makeScrolling(true)">Generate Scrolling GIF (with days)</button><br/>
+<button onclick="makeStatic(false)">Generate Static GIF</button>
+<button onclick="makeStatic(true)">Generate Static GIF (with days)</button>
+
+<p id="status">Ready.</p>
+
+<script src="gif.js"></script>
 
 <script>
-// ===== CONSTANTS =====
+/* ===============================
+   CONSTANTS
+================================ */
 const WIDTH = 96;
 const HEIGHT = 32;
 const COLOR = "#00ff00";
-const TOP_TEXT = "Shovel in the Ground";
-const TARGET = new Date("2027-12-31T00:00:00-05:00");
-const LEFT_X = 1;
-const STATIC_FRAMES = 60;
-const STATIC_DELAY = 100; // ms per frame (~6s total)
+const BG = "#000000";
 
-// ===== DATE MATH =====
-function computeYMW() {
-  const now = new Date();
-  if (now >= TARGET) return { years: 0, months: 0, weeks: 0 };
+/* ===============================
+   TIMEZONE-SAFE DATE MATH
+================================ */
+function getNYParts(d = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(d);
 
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const end   = new Date(TARGET.getFullYear(), TARGET.getMonth(), TARGET.getDate());
+  const o = {};
+  for (const p of parts) o[p.type] = p.value;
+  return { y: +o.year, m: +o.month, d: +o.day };
+}
 
-  let years  = end.getFullYear() - start.getFullYear();
-  let months = end.getMonth() - start.getMonth();
-  let days   = end.getDate() - start.getDate();
+function nyToUTC(y, m, d) {
+  return Date.UTC(y, m - 1, d);
+}
+
+function computeYMWD() {
+  const now = getNYParts();
+  const target = { y: 2027, m: 12, d: 31 };
+
+  let years = target.y - now.y;
+  let months = target.m - now.m;
+  let days = target.d - now.d;
 
   if (days < 0) {
     months--;
-    days += new Date(end.getFullYear(), end.getMonth(), 0).getDate();
+    days += new Date(Date.UTC(target.y, target.m - 1, 0)).getUTCDate();
   }
-
   if (months < 0) {
     years--;
     months += 12;
   }
 
-  return { years, months, weeks: Math.floor(days / 7) };
+  const weeks = Math.floor(days / 7);
+  days -= weeks * 7;
+
+  return { years, months, weeks, days };
 }
 
-function computeYMWD() {
-  const { years, months, weeks } = computeYMW();
-  const now = new Date();
-  const daysTotal = Math.floor((TARGET - now) / (1000 * 60 * 60 * 24));
-  return { years, months, weeks, days: daysTotal % 7 };
-}
-
-function computeStatic() {
-  const { years, months, weeks } = computeYMW();
-  return {
-    line1: `${years} year${years===1?"":"s"}, ${months} month${months===1?"":"s"},`,
-    line2: `${weeks} week${weeks===1?"":"s"}`
-  };
-}
-
-function computeStaticDays() {
+function updateLabel() {
   const { years, months, weeks, days } = computeYMWD();
-  return {
-    line1: `${years} year${years===1?"":"s"}, ${months} month${months===1?"":"s"},`,
-    line2: `${weeks} week${weeks===1?"":"s"}, ${days} day${days===1?"":"s"}`
-  };
-}
-
-function todayStamp() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-}
-
-function fitFont(ctx, text, maxWidth, sizes=[10,9,8]) {
-  for (const s of sizes) {
-    ctx.font = `${s}px Arial`;
-    if (ctx.measureText(text).width <= maxWidth) return `${s}px Arial`;
-  }
-  return "8px Arial";
-}
-
-// ===== PREVIEW =====
-const pctx = document.getElementById("preview").getContext("2d");
-(function drawPreview(){
-  const { line1, line2 } = computeStatic();
   document.getElementById("label").innerText =
-    `Label for today: "${line1} | ${line2}"`;
+    `Label for today: "${years} year, ${months} months | ${weeks} weeks${days ? ", " + days + " days" : ""}"`;
+}
+updateLabel();
 
-  pctx.fillStyle="#000";
-  pctx.fillRect(0,0,WIDTH,HEIGHT);
-  pctx.fillStyle=COLOR;
+/* ===============================
+   DRAW HELPERS
+================================ */
+function clear(ctx) {
+  ctx.fillStyle = BG;
+  ctx.fillRect(0, 0, WIDTH, HEIGHT);
+}
 
-  pctx.font="10px Arial";
-  pctx.fillText(TOP_TEXT, LEFT_X, 10);
-  pctx.font="9px Arial";
-  pctx.fillText(line1, LEFT_X, 20);
-  pctx.fillText(line2, LEFT_X, 30);
-})();
+function drawText(ctx, text, x, y, size) {
+  ctx.fillStyle = COLOR;
+  ctx.font = `${size}px Arial`;
+  ctx.textBaseline = "top";
+  ctx.fillText(text, x, y);
+}
 
-// ===== GIF HELPER =====
-function makeGif(name, drawFn) {
+/* ===============================
+   STATIC GIF
+================================ */
+function makeStatic(withDays) {
+  const { years, months, weeks, days } = computeYMWD();
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
+
+  clear(ctx);
+
+  drawText(ctx, "Shovel in the Ground", 2, 1, 10);
+  drawText(ctx, `${years} year, ${months} months,`, 2, 13, 9);
+
+  const third = withDays
+    ? `${weeks} weeks, ${days} days`
+    : `${weeks} weeks`;
+
+  drawText(ctx, third, 2, 23, 9);
+
+  saveGIF([canvas], "static", withDays);
+}
+
+/* ===============================
+   SCROLLING GIF
+================================ */
+function makeScrolling(withDays) {
+  const { years, months, weeks, days } = computeYMWD();
+  const bottom = withDays
+    ? `${years} year, ${months} months, ${weeks} weeks, ${days} days`
+    : `${years} year, ${months} months, ${weeks} weeks`;
+
+  const frames = [];
+  const tmp = document.createElement("canvas");
+  tmp.width = WIDTH;
+  tmp.height = HEIGHT;
+  const tctx = tmp.getContext("2d");
+
+  const textWidth = bottom.length * 6;
+  for (let x = WIDTH; x > -textWidth; x -= 2) {
+    clear(tctx);
+    drawText(tctx, "Shovel in the Ground", 2, 1, 10);
+    drawText(tctx, bottom, x, 16, 9);
+
+    const frame = document.createElement("canvas");
+    frame.width = WIDTH;
+    frame.height = HEIGHT;
+    frame.getContext("2d").drawImage(tmp, 0, 0);
+    frames.push(frame);
+  }
+
+  saveGIF(frames, "scrolling", withDays);
+}
+
+/* ===============================
+   GIF EXPORT
+================================ */
+function saveGIF(frames, mode, withDays) {
   const gif = new GIF({
     workers: 2,
     quality: 10,
@@ -157,78 +190,24 @@ function makeGif(name, drawFn) {
     workerScript: "gif.worker.js"
   });
 
-  drawFn(gif);
+  frames.forEach(c => gif.addFrame(c, { delay: 120 }));
 
   gif.on("finished", blob => {
+    const today = new Date().toISOString().slice(0,10);
+    const tag = withDays ? "with_days" : "no_days";
+    const name = `penn_${mode}_${tag}_${today}.gif`;
+
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = name;
     a.click();
-    URL.revokeObjectURL(a.href);
-    document.getElementById("status").textContent =
-      `Done. Downloaded ${name}.`;
+
+    document.getElementById("status").innerText =
+      `Done. Saved ${name}`;
   });
 
   gif.render();
 }
-
-// ===== STATIC (NO DAYS) — 60 FRAMES =====
-document.getElementById("generateStaticBtn").onclick = () => {
-  document.getElementById("status").textContent = "Generating static GIF…";
-  const { line1, line2 } = computeStatic();
-
-  makeGif(`penn_static_${todayStamp()}.gif`, gif => {
-    const c=document.createElement("canvas");
-    c.width=WIDTH; c.height=HEIGHT;
-    const ctx=c.getContext("2d");
-
-    for(let i=0;i<STATIC_FRAMES;i++){
-      ctx.fillStyle="#000";
-      ctx.fillRect(0,0,WIDTH,HEIGHT);
-      ctx.fillStyle=COLOR;
-
-      ctx.font=fitFont(ctx,TOP_TEXT,WIDTH-2);
-      ctx.fillText(TOP_TEXT,LEFT_X,9);
-
-      ctx.font=fitFont(ctx,line1,WIDTH-2,[9,8]);
-      ctx.fillText(line1,LEFT_X,20);
-
-      ctx.font=fitFont(ctx,line2,WIDTH-2,[9,8]);
-      ctx.fillText(line2,LEFT_X,30);
-
-      gif.addFrame(ctx,{copy:true,delay:STATIC_DELAY});
-    }
-  });
-};
-
-// ===== STATIC (WITH DAYS) — 60 FRAMES =====
-document.getElementById("generateStaticDaysBtn").onclick = () => {
-  document.getElementById("status").textContent = "Generating static GIF (with days)…";
-  const { line1, line2 } = computeStaticDays();
-
-  makeGif(`penn_static_days_${todayStamp()}.gif`, gif => {
-    const c=document.createElement("canvas");
-    c.width=WIDTH; c.height=HEIGHT;
-    const ctx=c.getContext("2d");
-
-    for(let i=0;i<STATIC_FRAMES;i++){
-      ctx.fillStyle="#000";
-      ctx.fillRect(0,0,WIDTH,HEIGHT);
-      ctx.fillStyle=COLOR;
-
-      ctx.font=fitFont(ctx,TOP_TEXT,WIDTH-2);
-      ctx.fillText(TOP_TEXT,LEFT_X,9);
-
-      ctx.font=fitFont(ctx,line1,WIDTH-2,[9,8]);
-      ctx.fillText(line1,LEFT_X,20);
-
-      ctx.font=fitFont(ctx,line2,WIDTH-2,[9,8]);
-      ctx.fillText(line2,LEFT_X,30);
-
-      gif.addFrame(ctx,{copy:true,delay:STATIC_DELAY});
-    }
-  });
-};
 </script>
 
 </body>
