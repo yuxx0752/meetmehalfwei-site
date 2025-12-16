@@ -2,15 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Penn T Countdown – JPG + Video Export</title>
+<title>Penn T Countdown – JPG + WebM Export</title>
 <style>
   body { background:#111; color:#eee; font-family:system-ui,sans-serif; padding:16px; }
-  #wrap { display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap; }
   #panel { border:1px solid #444; padding:10px; background:#000; display:inline-block; }
   #canvas { width: 768px; height: 256px; image-rendering: pixelated; border:1px solid #555; }
   button { padding:8px 14px; margin:6px 6px 6px 0; cursor:pointer; }
-  .muted { color:#bbb; font-size: 13px; max-width: 780px; }
-  code { background:#222; padding:2px 6px; border-radius:4px; }
+  .muted { color:#bbb; font-size:13px; max-width: 820px; }
 </style>
 </head>
 <body>
@@ -18,28 +16,19 @@
 <h2>Penn T – Shovel in the Ground Countdown</h2>
 <p><b>Target date:</b> December 31, 2027 (America/New_York calendar)</p>
 
-<div id="wrap">
-  <div>
-    <div id="panel">
-      <canvas id="canvas" width="96" height="32"></canvas>
-    </div>
-
-    <div style="margin-top:10px;">
-      <button id="btnStaticJpg">Download STATIC JPG</button>
-      <button id="btnStaticJpgDays">Download STATIC JPG (with days)</button>
-      <br/>
-      <button id="btnScrollWebm">Download SCROLLING Video (WebM)</button>
-      <button id="btnScrollWebmDays">Download SCROLLING Video (WebM, with days)</button>
-    </div>
-
-    <p id="status" class="muted">Ready.</p>
-
-    <p class="muted">
-      If your LED app only accepts MP4, convert the downloaded WebM using ffmpeg (command below).
-      If your app accepts WebM directly, you’re done.
-    </p>
-  </div>
+<div id="panel">
+  <canvas id="canvas" width="96" height="32"></canvas>
 </div>
+
+<div style="margin-top:10px;">
+  <button id="btnStaticJpg">Download STATIC JPG</button>
+  <button id="btnStaticJpgDays">Download STATIC JPG (with days)</button>
+  <br/>
+  <button id="btnScrollWebm">Download SCROLLING WebM</button>
+  <button id="btnScrollWebmDays">Download SCROLLING WebM (with days)</button>
+</div>
+
+<p id="status" class="muted">Ready.</p>
 
 <script>
 /* =========================
@@ -48,12 +37,12 @@
 const W = 96, H = 32;
 const COLOR = "#00ff00";
 const BG = "#000000";
-const TARGET_NY = { y: 2027, m: 12, d: 31 }; // Dec 31, 2027
+
+const TARGET_NY = { y: 2027, m: 12, d: 31 };
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
-// Layout (tuned for 96x32)
 const X = 1;
 const Y_TOP = 1;
 const Y_MID = 12;
@@ -62,14 +51,14 @@ const Y_BOT = 22;
 function status(msg){ document.getElementById("status").textContent = msg; }
 
 /* =========================
-   TIMEZONE-SAFE NY DATE
-   (fixes off-by-one)
+   TIMEZONE-SAFE NY DATE MATH
 ========================= */
 function getNYParts(d = new Date()) {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York",
     year: "numeric", month: "2-digit", day: "2-digit"
   }).formatToParts(d);
+
   const o = {};
   for (const p of parts) o[p.type] = p.value;
   return { y:+o.year, m:+o.month, d:+o.day };
@@ -82,7 +71,6 @@ function computeYMWD() {
   let months = TARGET_NY.m - now.m;
   let days   = TARGET_NY.d - now.d;
 
-  // Borrow days from previous month of target
   if (days < 0) {
     months--;
     const prevMonthDays = new Date(Date.UTC(TARGET_NY.y, TARGET_NY.m - 1, 0)).getUTCDate();
@@ -93,14 +81,10 @@ function computeYMWD() {
     months += 12;
   }
 
-  // Convert remaining days to weeks + days
   const weeks = Math.floor(days / 7);
-  days = days - weeks * 7;
+  days -= weeks * 7;
 
-  // Clamp if past target
-  if (years < 0 || (years === 0 && months === 0 && weeks === 0 && days === 0)) {
-    return { years:0, months:0, weeks:0, days:0 };
-  }
+  if (years < 0) return { years:0, months:0, weeks:0, days:0 };
   return { years, months, weeks, days };
 }
 
@@ -110,7 +94,8 @@ function stamp() {
 }
 
 /* =========================
-   DRAW HELPERS
+   DRAW HELPERS (CRISP)
+   (no XY offset “micro-bold”)
 ========================= */
 function clear() {
   ctx.fillStyle = BG;
@@ -127,35 +112,29 @@ function fitFont(text, maxWidth, sizes) {
   return sizes[sizes.length-1];
 }
 
-// “micro-bold” = +1px width and +1px height without blowing up
-function microBold(text, x, y) {
-  ctx.fillText(text, x, y);
-  ctx.fillText(text, x+1, y);   // +1 wider
-  ctx.fillText(text, x, y+1);   // +1 taller
+function drawText(text, x, y, size) {
+  ctx.font = `${size}px Arial`;
+  // integer coordinates only => crisp
+  ctx.fillText(text, x|0, y|0);
 }
 
 function drawStatic(withDays) {
   const { years, months, weeks, days } = computeYMWD();
 
-  const top = "Shovel in the Ground"; // no ellipsis
-  const line2 = `${years} year, ${months} months,`; // comma after months
+  const top = "Shovel in the Ground";
+  const line2 = `${years} year, ${months} months,`;
   const line3 = withDays ? `${weeks} weeks, ${days} days` : `${weeks} weeks`;
 
   clear();
 
-  // Top line slightly larger
   const topSize = fitFont(top, W-2, [10,9,8]);
-  ctx.font = `${topSize}px Arial`;
-  ctx.fillText(top, X, Y_TOP);
+  drawText(top, X, Y_TOP, topSize);
 
-  // Bottom two lines: same size, micro-bold for readability
-  const s2 = fitFont(line2, W-2, [9,8]);
-  ctx.font = `${s2}px Arial`;
-  microBold(line2, X, Y_MID);
+  const midSize = fitFont(line2, W-2, [9,8]);
+  drawText(line2, X, Y_MID, midSize);
 
-  const s3 = fitFont(line3, W-2, [9,8]);
-  ctx.font = `${s3}px Arial`;
-  microBold(line3, X, Y_BOT);
+  const botSize = fitFont(line3, W-2, [9,8]);
+  drawText(line3, X, Y_BOT, botSize);
 }
 
 function drawScrollingFrame(withDays, scrollX) {
@@ -168,15 +147,12 @@ function drawScrollingFrame(withDays, scrollX) {
 
   clear();
 
-  // Header
   const topSize = fitFont(top, W-2, [10,9,8]);
-  ctx.font = `${topSize}px Arial`;
-  ctx.fillText(top, X, Y_TOP);
+  drawText(top, X, Y_TOP, topSize);
 
-  // Scrolling line
-  const botSize = fitFont(bottom, 9999, [9]); // keep consistent
-  ctx.font = `${botSize}px Arial`;
-  ctx.fillText(bottom, scrollX, 16);
+  // Keep bottom at fixed size for consistency
+  ctx.font = `9px Arial`;
+  ctx.fillText(bottom, scrollX|0, 16);
 }
 
 /* =========================
@@ -185,7 +161,7 @@ function drawScrollingFrame(withDays, scrollX) {
 async function downloadJpg(withDays) {
   drawStatic(withDays);
 
-  // Note: JPG on tiny pixel art can blur a bit; if you want sharper, switch to PNG.
+  // JPG is fine; if you ever want maximum crispness, switch to PNG.
   const blob = await new Promise(res => canvas.toBlob(res, "image/jpeg", 0.95));
   const name = `penn_static_${withDays ? "with_days_" : ""}${stamp()}.jpg`;
 
@@ -202,30 +178,34 @@ async function downloadJpg(withDays) {
 }
 
 /* =========================
-   DOWNLOAD: VIDEO (WebM)
-   (Record canvas frames)
+   DOWNLOAD: SMOOTH WEBM SCROLL
+   Key changes:
+   - fps = 30 (was 10)
+   - step = 1 px/frame (was 2)
+   - duration computed from text width
+   - requestAnimationFrame pacing
 ========================= */
 async function downloadWebm(withDays) {
-  status("Recording video…");
+  status("Recording smooth scrolling WebM…");
 
-  // Build scroll text width estimate (safe + simple)
   const { years, months, weeks, days } = computeYMWD();
   const bottom = withDays
     ? `${years} year, ${months} months, ${weeks} weeks, ${days} days`
     : `${years} year, ${months} months, ${weeks} weeks`;
+
+  // Measure text width accurately
   ctx.font = "9px Arial";
   const textW = Math.ceil(ctx.measureText(bottom).width);
 
-  const fps = 10;
-  const step = 2;           // scroll speed per frame
+  const fps = 30;
+  const stepPx = 1;  // smoother
   const startX = W;
   const endX = -textW;
 
-  // Duration frames
-  const frames = Math.max(1, Math.ceil((startX - endX) / step));
-  const durationMs = Math.ceil((frames / fps) * 1000);
+  const totalFrames = Math.max(1, Math.ceil((startX - endX) / stepPx));
+  const frameMs = 1000 / fps;
+  const durationMs = Math.ceil(totalFrames * frameMs);
 
-  // Record the canvas stream
   const stream = canvas.captureStream(fps);
   let mime = "video/webm;codecs=vp9";
   if (!MediaRecorder.isTypeSupported(mime)) mime = "video/webm;codecs=vp8";
@@ -235,24 +215,35 @@ async function downloadWebm(withDays) {
   const chunks = [];
   rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
 
-  // Animate while recording
   let x = startX;
-  let frameCount = 0;
-
-  function tick() {
-    drawScrollingFrame(withDays, x);
-    x -= step;
-    frameCount++;
-    if (frameCount >= frames) return;
-    setTimeout(tick, Math.round(1000 / fps));
-  }
+  let frame = 0;
+  let last = performance.now();
 
   rec.start();
-  tick();
 
-  await new Promise(res => setTimeout(res, durationMs + 150));
+  await new Promise(resolve => {
+    function loop(t) {
+      const elapsed = t - last;
+      if (elapsed >= frameMs - 1) {
+        last = t;
+
+        drawScrollingFrame(withDays, x);
+        x -= stepPx;
+        frame++;
+
+        if (frame >= totalFrames) {
+          // Hold last frame a beat for readability
+          drawScrollingFrame(withDays, endX);
+          setTimeout(resolve, 150);
+          return;
+        }
+      }
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  });
+
   rec.stop();
-
   await new Promise(res => rec.onstop = res);
 
   const blob = new Blob(chunks, { type: mime });
@@ -267,24 +258,18 @@ async function downloadWebm(withDays) {
   a.remove();
   URL.revokeObjectURL(url);
 
-  status(`Saved ${name}`);
+  status(`Saved ${name} (30fps smooth scroll)`);
 }
 
 /* =========================
-   Wire up buttons
+   Buttons + initial preview
 ========================= */
 document.getElementById("btnStaticJpg").addEventListener("click", () => downloadJpg(false));
 document.getElementById("btnStaticJpgDays").addEventListener("click", () => downloadJpg(true));
 document.getElementById("btnScrollWebm").addEventListener("click", () => downloadWebm(false));
 document.getElementById("btnScrollWebmDays").addEventListener("click", () => downloadWebm(true));
 
-// Initial preview
 drawStatic(false);
 </script>
-
-<!--
-MP4 conversion (if needed):
-ffmpeg -i penn_scrolling_with_days_YYYY-MM-DD.webm -vf "scale=iw:ih:flags=neighbor" -c:v libx264 -pix_fmt yuv420p -movflags +faststart penn_scrolling_with_days_YYYY-MM-DD.mp4
--->
 </body>
 </html>
