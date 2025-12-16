@@ -43,12 +43,20 @@ const TARGET_NY = { y: 2027, m: 12, d: 31 };
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
+// Layout (96x32)
 const X = 1;
 const Y_TOP = 1;
 const Y_MID = 12;
 const Y_BOT = 22;
 
 function status(msg){ document.getElementById("status").textContent = msg; }
+
+/* =========================
+   PLURALIZATION (day vs days, etc.)
+========================= */
+function unit(n, singular, plural = singular + "s") {
+  return `${n} ${n === 1 ? singular : plural}`;
+}
 
 /* =========================
    TIMEZONE-SAFE NY DATE MATH
@@ -95,7 +103,6 @@ function stamp() {
 
 /* =========================
    DRAW HELPERS (CRISP)
-   (no XY offset “micro-bold”)
 ========================= */
 function clear() {
   ctx.fillStyle = BG;
@@ -114,22 +121,47 @@ function fitFont(text, maxWidth, sizes) {
 
 function drawText(text, x, y, size) {
   ctx.font = `${size}px Arial`;
-  // integer coordinates only => crisp
   ctx.fillText(text, x|0, y|0);
 }
 
-function drawStatic(withDays) {
+/* =========================
+   STRING BUILDERS (with pluralization)
+========================= */
+function buildStaticLines(withDays) {
   const { years, months, weeks, days } = computeYMWD();
 
-  const top = "Shovel in the Ground";
-  const line2 = `${years} year, ${months} months,`;
-  const line3 = withDays ? `${weeks} weeks, ${days} days` : `${weeks} weeks`;
+  const top = "Shovel in the Ground"; // no ellipsis
+  // Static: you wanted comma after months
+  const line2 = `${unit(years, "year")}, ${unit(months, "month")},`;
+
+  const line3 = withDays
+    ? `${unit(weeks, "week")}, ${unit(days, "day")}`
+    : `${unit(weeks, "week")}`;
+
+  return { top, line2, line3 };
+}
+
+function buildScrollBottom(withDays) {
+  const { years, months, weeks, days } = computeYMWD();
+
+  return withDays
+    ? `${unit(years, "year")}, ${unit(months, "month")}, ${unit(weeks, "week")}, ${unit(days, "day")}`
+    : `${unit(years, "year")}, ${unit(months, "month")}, ${unit(weeks, "week")}`;
+}
+
+/* =========================
+   STATIC DRAW
+========================= */
+function drawStatic(withDays) {
+  const { top, line2, line3 } = buildStaticLines(withDays);
 
   clear();
 
+  // Top line slightly larger
   const topSize = fitFont(top, W-2, [10,9,8]);
   drawText(top, X, Y_TOP, topSize);
 
+  // Bottom two lines same size (no XY offset / no blur)
   const midSize = fitFont(line2, W-2, [9,8]);
   drawText(line2, X, Y_MID, midSize);
 
@@ -138,19 +170,15 @@ function drawStatic(withDays) {
 }
 
 function drawScrollingFrame(withDays, scrollX) {
-  const { years, months, weeks, days } = computeYMWD();
-
   const top = "Shovel in the Ground";
-  const bottom = withDays
-    ? `${years} year, ${months} months, ${weeks} weeks, ${days} days`
-    : `${years} year, ${months} months, ${weeks} weeks`;
+  const bottom = buildScrollBottom(withDays);
 
   clear();
 
   const topSize = fitFont(top, W-2, [10,9,8]);
   drawText(top, X, Y_TOP, topSize);
 
-  // Keep bottom at fixed size for consistency
+  // Keep scrolling line consistent
   ctx.font = `9px Arial`;
   ctx.fillText(bottom, scrollX|0, 16);
 }
@@ -161,7 +189,6 @@ function drawScrollingFrame(withDays, scrollX) {
 async function downloadJpg(withDays) {
   drawStatic(withDays);
 
-  // JPG is fine; if you ever want maximum crispness, switch to PNG.
   const blob = await new Promise(res => canvas.toBlob(res, "image/jpeg", 0.95));
   const name = `penn_static_${withDays ? "with_days_" : ""}${stamp()}.jpg`;
 
@@ -179,26 +206,18 @@ async function downloadJpg(withDays) {
 
 /* =========================
    DOWNLOAD: SMOOTH WEBM SCROLL
-   Key changes:
-   - fps = 30 (was 10)
-   - step = 1 px/frame (was 2)
-   - duration computed from text width
-   - requestAnimationFrame pacing
 ========================= */
 async function downloadWebm(withDays) {
   status("Recording smooth scrolling WebM…");
 
-  const { years, months, weeks, days } = computeYMWD();
-  const bottom = withDays
-    ? `${years} year, ${months} months, ${weeks} weeks, ${days} days`
-    : `${years} year, ${months} months, ${weeks} weeks`;
+  const bottom = buildScrollBottom(withDays);
 
   // Measure text width accurately
   ctx.font = "9px Arial";
   const textW = Math.ceil(ctx.measureText(bottom).width);
 
   const fps = 30;
-  const stepPx = 1;  // smoother
+  const stepPx = 1;
   const startX = W;
   const endX = -textW;
 
@@ -232,7 +251,6 @@ async function downloadWebm(withDays) {
         frame++;
 
         if (frame >= totalFrames) {
-          // Hold last frame a beat for readability
           drawScrollingFrame(withDays, endX);
           setTimeout(resolve, 150);
           return;
@@ -258,7 +276,7 @@ async function downloadWebm(withDays) {
   a.remove();
   URL.revokeObjectURL(url);
 
-  status(`Saved ${name} (30fps smooth scroll)`);
+  status(`Saved ${name}`);
 }
 
 /* =========================
@@ -273,3 +291,4 @@ drawStatic(false);
 </script>
 </body>
 </html>
+```0
